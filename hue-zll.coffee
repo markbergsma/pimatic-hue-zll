@@ -20,9 +20,17 @@ module.exports = (env) ->
         configDef: deviceConfigDef.HueZLLOnOffLight,
         createCallback: (deviceConfig) => new HueZLLOnOffLight(deviceConfig, @hueApi, @config)
       })
+      @framework.deviceManager.registerDeviceClass("HueZLLOnOffLightGroup", {
+        configDef: deviceConfigDef.HueZLLOnOffLightGroup,
+        createCallback: (deviceConfig) => new HueZLLOnOffLightGroup(deviceConfig, @hueApi, @config)
+      })
       @framework.deviceManager.registerDeviceClass("HueZLLDimmableLight", {
         configDef: deviceConfigDef.HueZLLDimmableLight,
         createCallback: (deviceConfig) => new HueZLLDimmableLight(deviceConfig, @hueApi, @config)
+      })
+      @framework.deviceManager.registerDeviceClass("HueZLLDimmableLightGroup", {
+        configDef: deviceConfigDef.HueZLLDimmableLightGroup,
+        createCallback: (deviceConfig) => new HueZLLDimmableLightGroup(deviceConfig, @hueApi, @config)
       })
 
       @hueApi = new hue.HueApi(
@@ -34,17 +42,16 @@ module.exports = (env) ->
         env.logger.info("Connected to bridge #{version['name']}, " +
           "API version #{version['version']['api']}, software #{version['version']['software']}")
       @hueApi.lights (err, lights) => env.logger.debug(lights)
+      @hueApi.groups (err, groups) => env.logger.debug(groups)
 
   class BaseHueLight
 
     constructor: (@device, @hueApi, @hueId) ->
       @lightState = hue.lightState.create()
 
-    poll: ->
-      env.logger.debug("Polling Hue device #{@hueId}")
-      return @hueApi.lightStatus(@hueId).then(@_lightStateReceived)
+    poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived)
 
-    _lightStateReceived: (result) =>
+    _stateReceived: (result) =>
       newLightState = hue.lightState.create(result.state)
       env.logger.debug("light #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
         "new state: #{JSON.stringify(newLightState._values)}")
@@ -54,14 +61,30 @@ module.exports = (env) ->
     setLightState: (hueState) ->
       @hueApi.setLightState(@hueId, hueState).then( ( => @lightState = hueState) )
 
+  class BaseHueLightGroup extends BaseHueLight
+
+    poll: -> @hueApi.getGroup(@hueId).then(@_stateReceived)
+
+    _stateReceived: (result) =>
+      newGroupState = hue.lightState.create(result.lastAction)
+      env.logger.debug("group #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
+        "new state: #{JSON.stringify(newGroupState._values)}")
+      @lightState = newGroupState
+      return result.lastAction
+
+    setLightState: (hueState) ->
+      @hueApi.setGroupLightState(@hueId, hueState).then( ( => @lightState = hueState) )
+
   class HueZLLOnOffLight extends env.devices.SwitchActuator
+    HueClass: BaseHueLight
+    isGroup: false
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
       super()
 
-      @hue = new BaseHueLight(this, @hueApi, @config.hueId)
+      @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
 
@@ -76,14 +99,20 @@ module.exports = (env) ->
       hueState = hue.lightState.create().on(state)
       return @hue.setLightState(hueState).then( ( => @_setState state) )
 
+  class HueZLLOnOffLightGroup extends HueZLLOnOffLight
+    HueClass: BaseHueLightGroup
+    isGroup: true
+
   class HueZLLDimmableLight extends env.devices.DimmerActuator
+    HueClass: BaseHueLight
+    isGroup: false
 
     constructor: (@config, hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
       super()
 
-      @hue = new BaseHueLight(this, hueApi, @config.hueId)
+      @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
 
@@ -102,5 +131,9 @@ module.exports = (env) ->
     changeDimlevelTo: (state) ->
       hueState = hue.lightState.create().on(state != 0).bri(state / 100 * 254)
       return @hue.setLightState(hueState).then( ( => @_setDimlevel state) )
+
+  class HueZLLDimmableLightGroup extends HueZLLDimmableLight
+    HueClass: BaseHueLightGroup
+    isGroup: true
 
   return new HueZLLPlugin()
