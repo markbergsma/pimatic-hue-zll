@@ -8,24 +8,53 @@ module.exports = (env) ->
   # Require the [cassert library](https://github.com/rhoot/cassert).
   assert = env.require 'cassert'
 
-  # Include you own depencies with nodes global require function:
-  #  
-  #     someThing = require 'someThing'
-  #  
+  # node-hue-api needs es6-promise
+  es6Promise = require 'es6-promise'
+  hue = require 'node-hue-api'
 
   class HueZLLPlugin extends env.plugins.Plugin
 
-    # ####init()
-    # The `init` function is called by the framework to ask your plugin to initialise.
-    #  
-    # #####params:
-    #  * `app` is the [express] instance the framework is using.
-    #  * `framework` the framework itself
-    #  * `config` the properties the user specified as config for your plugin in the `plugins` 
-    #     section of the config.json file 
-    #     
-    # 
     init: (app, @framework, @config) =>
-      env.logger.info("Hue ZLL plugin starting")
+      deviceConfigDef = require("./device-config-schema")
+      @framework.deviceManager.registerDeviceClass("HueZLLOnOffLight", {
+        configDef: deviceConfigDef.HueZLLOnOffLight,
+        createCallback: (deviceConfig) => new HueZLLOnOffLight(deviceConfig, @hueApi, @config)
+      })
+
+      @hueApi = new hue.HueApi(
+        @config.host,
+        @config.username
+      )
+
+      @hueApi.version (err, version) =>
+        env.logger.info("Connected to bridge #{version['name']}, " +
+          "API version #{version['version']['api']}, software #{version['version']['software']}")
+      @hueApi.lights (err, lights) => env.logger.debug(lights)
+
+  class HueZLLOnOffLight extends env.devices.SwitchActuator
+
+    constructor: (@config, @hueApi, @_pluginConfig) ->
+      @id = @config.id
+      @name = @config.name
+      super()
+
+      @hueId = @config.hueId
+      @lightStateInitialized = @poll()
+      setInterval(( => @poll() ), @_pluginConfig.polling)
+
+    # Wait on first poll on initialization
+    getState: -> Promise.join @lightStateInitialized, super()
+
+    poll: ->
+      env.logger.debug("Polling Hue device #{@config.hueId}")
+      @hueApi.lightStatus(@hueId).then(@_lightStateReceived)
+
+    _lightStateReceived: (result) =>
+      env.logger.debug("old state: #{@_state}   new state: #{result.state.on}")
+      @_setState result.state.on
+
+    changeStateTo: (state) ->
+      hueState = hue.lightState.create().on(state)
+      return @hueApi.setLightState(@hueId, hueState).then( ( => @_setState state) )
 
   return new HueZLLPlugin()
