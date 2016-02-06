@@ -31,5 +31,21 @@ module.exports = {
       hueId:
         description: "The Hue API group id"
         type: "number"
-  }
+  },
+  HueZLLColorTempLight: {
+    title: "Hue Color Temperature light"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API light id"
+        type: "number"
+  },
+  HueZLLColorTempLightGroup: {
+    title: "Hue Color Temperature light group"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API group id"
+        type: "number"
+  },
 }
