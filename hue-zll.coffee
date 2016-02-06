@@ -15,24 +15,6 @@ module.exports = (env) ->
   class HueZLLPlugin extends env.plugins.Plugin
 
     init: (app, @framework, @config) =>
-      deviceConfigDef = require("./device-config-schema")
-      @framework.deviceManager.registerDeviceClass("HueZLLOnOffLight", {
-        configDef: deviceConfigDef.HueZLLOnOffLight,
-        createCallback: (deviceConfig) => new HueZLLOnOffLight(deviceConfig, @hueApi, @config)
-      })
-      @framework.deviceManager.registerDeviceClass("HueZLLOnOffLightGroup", {
-        configDef: deviceConfigDef.HueZLLOnOffLightGroup,
-        createCallback: (deviceConfig) => new HueZLLOnOffLightGroup(deviceConfig, @hueApi, @config)
-      })
-      @framework.deviceManager.registerDeviceClass("HueZLLDimmableLight", {
-        configDef: deviceConfigDef.HueZLLDimmableLight,
-        createCallback: (deviceConfig) => new HueZLLDimmableLight(deviceConfig, @hueApi, @config)
-      })
-      @framework.deviceManager.registerDeviceClass("HueZLLDimmableLightGroup", {
-        configDef: deviceConfigDef.HueZLLDimmableLightGroup,
-        createCallback: (deviceConfig) => new HueZLLDimmableLightGroup(deviceConfig, @hueApi, @config)
-      })
-
       @hueApi = new hue.HueApi(
         @config.host,
         @config.username
@@ -43,6 +25,21 @@ module.exports = (env) ->
           "API version #{version['version']['api']}, software #{version['version']['software']}")
       @hueApi.lights (err, lights) => env.logger.debug(lights)
       @hueApi.groups (err, groups) => env.logger.debug(groups)
+
+      deviceConfigDef = require("./device-config-schema")
+
+      deviceClasses = [
+        HueZLLOnOffLight,
+        HueZLLOnOffLightGroup,
+        HueZLLDimmableLight,
+        HueZLLDimmableLightGroup
+      ]
+      for DeviceClass in deviceClasses
+        do (DeviceClass) =>
+          @framework.deviceManager.registerDeviceClass(DeviceClass.name, {
+            configDef: deviceConfigDef[DeviceClass.name],
+            createCallback: (deviceConfig) => new DeviceClass(deviceConfig, @hueApi, @config)
+          })
 
   class BaseHueLight
 
