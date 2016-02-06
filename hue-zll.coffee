@@ -35,6 +35,25 @@ module.exports = (env) ->
           "API version #{version['version']['api']}, software #{version['version']['software']}")
       @hueApi.lights (err, lights) => env.logger.debug(lights)
 
+  class BaseHueLight
+
+    constructor: (@device, @hueApi, @hueId) ->
+      @lightState = hue.lightState.create()
+
+    poll: ->
+      env.logger.debug("Polling Hue device #{@hueId}")
+      return @hueApi.lightStatus(@hueId).then(@_lightStateReceived)
+
+    _lightStateReceived: (result) =>
+      newLightState = hue.lightState.create(result.state)
+      env.logger.debug("light #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
+        "new state: #{JSON.stringify(newLightState._values)}")
+      @lightState = newLightState
+      return result.state
+
+    setLightState: (hueState) ->
+      @hueApi.setLightState(@hueId, hueState).then( ( => @lightState = hueState) )
+
   class HueZLLOnOffLight extends env.devices.SwitchActuator
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
@@ -42,51 +61,43 @@ module.exports = (env) ->
       @name = @config.name
       super()
 
-      @hueId = @config.hueId
+      @hue = new BaseHueLight(this, @hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
 
     # Wait on first poll on initialization
     getState: -> Promise.join @lightStateInitialized, super()
 
-    poll: ->
-      env.logger.debug("Polling Hue device #{@config.hueId}")
-      @hueApi.lightStatus(@hueId).then(@_lightStateReceived)
+    poll: -> @hue.poll().then(@_lightStateReceived)
 
-    _lightStateReceived: (result) =>
-      env.logger.debug("old state: #{@_state}   new state: #{result.state.on}")
-      @_setState result.state.on
+    _lightStateReceived: (rstate) => @_setState rstate.on
 
     changeStateTo: (state) ->
       hueState = hue.lightState.create().on(state)
-      return @hueApi.setLightState(@hueId, hueState).then( ( => @_setState state) )
+      return @hue.setLightState(hueState).then( ( => @_setState state) )
 
   class HueZLLDimmableLight extends env.devices.DimmerActuator
 
-    constructor: (@config, @hueApi, @_pluginConfig) ->
+    constructor: (@config, hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
       super()
 
-      @hueId = @config.hueId
+      @hue = new BaseHueLight(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
 
     # Wait on first poll on initialization
-    getState: -> Promise.join(@lightStateInitialized, super())
-    getDimlevel: -> Promise.join(@lightStateInitialized, super())
+    getState: -> Promise.join @lightStateInitialized, super()
+    getDimlevel: -> Promise.join @lightStateInitialized, super()
 
-    poll: ->
-      env.logger.debug("Polling Hue device #{@config.hueId}")
-      @hueApi.lightStatus(@hueId).then(@_lightStateReceived)
+    poll: -> @hue.poll().then(@_lightStateReceived)
 
-    _lightStateReceived: (result) =>
-      env.logger.debug("old state: #{@_state}   new state: #{JSON.stringify(result.state)}")
-      @_setDimlevel result.state.bri / 254 * 100
+    _lightStateReceived: (rstate) => @_setDimlevel rstate.bri / 254 * 100
 
     changeStateTo: (state) ->
       hueState = hue.lightState.create().on(state)
-      return @hueApi.setLightState(@hueId, hueState).then( ( => @_setState state) )
+      return @hue.setLightState(hueState).then( ( => @_setState state) )
 
     changeDimlevelTo: (state) ->
       hueState = hue.lightState.create().on(state != 0).bri(state / 100 * 254)
