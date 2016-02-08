@@ -83,7 +83,7 @@ module.exports = (env) ->
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
-      super()
+      super(@config, @hueApi, @_pluginConfig)
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
@@ -111,7 +111,7 @@ module.exports = (env) ->
     constructor: (@config, hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
-      super()
+      super(@config, @hueApi, @_pluginConfig)
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
