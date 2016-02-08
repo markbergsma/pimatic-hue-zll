@@ -14,6 +14,11 @@ module.exports = (env) ->
   es6Promise = require 'es6-promise'
   hue = require 'node-hue-api'
 
+  # helper function to mix in key/value pairs from another object
+  extend = (obj, mixin) ->
+    obj[key] = value for key, value of mixin
+    obj
+
   class HueZLLPlugin extends env.plugins.Plugin
 
     init: (app, @framework, @config) =>
@@ -111,11 +116,14 @@ module.exports = (env) ->
     constructor: (@config, hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
+      @extendAttributesActions()
       super(@config, @hueApi, @_pluginConfig)
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
+
+    extendAttributesActions: () =>
 
     # Wait on first poll on initialization
     getState: -> Promise.join @lightStateInitialized, super()
@@ -143,39 +151,20 @@ module.exports = (env) ->
 
     _ct: null
 
-    attributes:
-      state:
-        description: "The current state of the switch"
-        type: t.boolean
-        labels: ['on', 'off']
-      dimlevel:
-        description: "The current dim level"
-        type: t.number
-        unit: "%"
-      ct:
-        description: "the color temperature"
-        type: t.number
+    extendAttributesActions: () =>
+      super()
 
-    actions:
-      changeStateTo:
-        description: "Changes the switch to on or off"
-        params:
-          state:
-            type: t.boolean
-      turnOn:
-        description: "Turns the dim level to 100%"
-      turnOff:
-        description: "Turns the dim level to 0%"
-      changeDimlevelTo:
-        description: "Sets the level of the dimmer"
-        params:
-          dimlevel:
-            type: t.number
-      changeCtTo:
-        description: "changes the color temperature"
-        params:
-          ct:
-            type: t.number
+      @attributes = extend (extend {}, @attributes),
+        ct:
+          description: "the color temperature"
+          type: t.number
+
+      @actions = extend (extend {}, @actions),
+        changeCtTo:
+          description: "changes the color temperature"
+          params:
+            ct:
+              type: t.number
 
     _lightStateReceived: (rstate) =>
       @_setDimlevel rstate.bri / 254 * 100
