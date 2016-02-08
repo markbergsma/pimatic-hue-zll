@@ -41,7 +41,11 @@ module.exports = (env) ->
         HueZLLDimmableLight,
         HueZLLDimmableLightGroup,
         HueZLLColorTempLight,
-        HueZLLColorTempLightGroup
+        HueZLLColorTempLightGroup,
+        HueZLLColorLight,
+        HueZLLColorLightGroup,
+        HueZLLExtendedColorLight,
+        HueZLLExtendedColorLightGroup
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -112,6 +116,9 @@ module.exports = (env) ->
   class HueZLLDimmableLight extends env.devices.DimmerActuator
     HueClass: BaseHueLight
     isGroup: false
+
+    newAttributes: {}
+    newActions: {}
 
     constructor: (@config, hueApi, @_pluginConfig) ->
       @id = @config.id
@@ -185,6 +192,117 @@ module.exports = (env) ->
     getCt: -> Promise.join @lightStateInitialized, Promise.resolve( @_ct )
 
   class HueZLLColorTempLightGroup extends HueZLLColorTempLight
+    HueClass: BaseHueLightGroup
+    isGroup: true
+
+  class HueZLLColorLight extends HueZLLDimmableLight
+    HueClass: BaseHueLight
+    isGroup: false
+
+    _hue: null
+    _sat: null
+
+    extendAttributesActions: () =>
+      super()
+
+      @attributes = extend (extend {}, @attributes),
+        hue:
+          description: "the color hue value"
+          type: t.number
+        sat:
+          description: "the color saturation value"
+          type: t.number
+
+      @actions = extend (extend {}, @actions),
+        changeHueTo:
+          description: "changes the color hue"
+          params:
+            hue:
+              type: t.number
+        changeSatTo:
+          description: "changes the color saturation"
+          params:
+            sat:
+              type: t.number
+
+    _lightStateReceived: (rstate) =>
+      @_setDimlevel rstate.bri / 254 * 100
+      @_setHue rstate.hue
+      @_setSat rstate.sat
+
+    changeHueTo: (hue) ->
+      hueState = hue.lightState.create().hue(hue)
+      return @hue.setLightState(hueState).then( ( => @_setHue hue) )
+
+    changeSatTo: (sat) ->
+      hueState = hue.lightState.create().sat(hue)
+      return @hue.setLightState(hueState).then( ( => @_setSat sat) )
+
+    _setHue: (hue) ->
+      hue = parseFloat(hue)
+      assert not isNaN(hue)
+      assert 0 <= hue <= 65535
+      unless @_hue is hue
+        @_hue = hue
+        @emit "hue", hue
+
+    _setSat: (sat) ->
+      sat = parseFloat(sat)
+      assert not isNaN(sat)
+      assert 0 <= sat <= 65535
+      unless @_sat is sat
+        @_sat = sat
+        @emit "sat", sat
+
+    getHue: -> Promise.join @lightStateInitialized, Promise.resolve( @_hue )
+    getSat: -> Promise.join @lightStateInitialized, Promise.resolve( @_sat )
+
+  class HueZLLColorLightGroup extends HueZLLColorLight
+    HueClass: BaseHueLightGroup
+    isGroup: true
+
+  class HueZLLExtendedColorLight extends HueZLLColorLight
+    HueClass: BaseHueLight
+    isGroup: false
+
+    _ct: null
+
+    extendAttributesActions: () =>
+      super()
+
+      @attributes = extend (extend {}, @attributes),
+        ct:
+          description: "the color temperature"
+          type: t.number
+
+      @actions = extend (extend {}, @actions),
+        changeCtTo:
+          description: "changes the color temperature"
+          params:
+            ct:
+              type: t.number
+
+    _lightStateReceived: (rstate) =>
+      @_setDimlevel rstate.bri / 254 * 100
+      @_setHue rstate.hue
+      @_setSat rstate.sat
+      @_setCt rstate.ct
+
+    changeCtTo: (ct) ->
+      hueState = hue.lightState.create().ct(ct)
+      return @hue.setLightState(hueState).then( ( => @_setCt ct) )
+
+    _setCt: (ct) ->
+      ct = parseFloat(ct)
+      assert not isNaN(ct)
+      assert 153 <= ct <= 500
+      unless @_ct is ct
+        @_ct = ct
+        @emit "ct", ct
+
+    getCt: -> Promise.join @lightStateInitialized, Promise.resolve( @_ct )
+
+  class HueZLLExtendedColorLightGroup extends HueZLLExtendedColorLight
     HueClass: BaseHueLightGroup
     isGroup: true
 

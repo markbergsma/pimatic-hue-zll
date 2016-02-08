@@ -48,4 +48,36 @@ module.exports = {
         description: "The Hue API group id"
         type: "number"
   },
+  HueZLLColorLight: {
+    title: "Hue Color light"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API light id"
+        type: "number"
+  },
+  HueZLLColorLightGroup: {
+    title: "Hue Color light group"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API group id"
+        type: "number"
+  },
+  HueZLLExtendedColorLight: {
+    title: "Hue Extended Color light"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API light id"
+        type: "number"
+  },
+  HueZLLExtendedColorLightGroup: {
+    title: "Hue Extended Color light group"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API group id"
+        type: "number"
+  },
 }
