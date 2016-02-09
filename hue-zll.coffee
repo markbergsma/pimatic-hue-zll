@@ -152,11 +152,26 @@ module.exports = (env) ->
     HueClass: BaseHueLightGroup
     isGroup: true
 
+  ColorTempMixin =
+    _ct: null    
+
+    changeCtTo: (ct) ->
+      hueState = hue.lightState.create().ct(ct)
+      return @hue.setLightState(hueState).then( ( => @_setCt ct) )
+
+    _setCt: (ct) ->
+      ct = parseFloat(ct)
+      assert not isNaN(ct)
+      assert 153 <= ct <= 500
+      unless @_ct is ct
+        @_ct = ct
+        @emit "ct", ct
+
+    getCt: -> Promise.join @lightStateInitialized, Promise.resolve( @_ct )
+
   class HueZLLColorTempLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
     isGroup: false
-
-    _ct: null
 
     extendAttributesActions: () =>
       super()
@@ -177,23 +192,13 @@ module.exports = (env) ->
       @_setDimlevel rstate.bri / 254 * 100
       @_setCt rstate.ct
 
-    changeCtTo: (ct) ->
-      hueState = hue.lightState.create().ct(ct)
-      return @hue.setLightState(hueState).then( ( => @_setCt ct) )
-
-    _setCt: (ct) ->
-      ct = parseFloat(ct)
-      assert not isNaN(ct)
-      assert 153 <= ct <= 500
-      unless @_ct is ct
-        @_ct = ct
-        @emit "ct", ct
-
-    getCt: -> Promise.join @lightStateInitialized, Promise.resolve( @_ct )
+  extend HueZLLColorTempLight.prototype, ColorTempMixin
 
   class HueZLLColorTempLightGroup extends HueZLLColorTempLight
     HueClass: BaseHueLightGroup
     isGroup: true
+
+  extend HueZLLColorTempLightGroup.prototype, ColorTempMixin
 
   class HueZLLColorLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
@@ -265,8 +270,6 @@ module.exports = (env) ->
     HueClass: BaseHueLight
     isGroup: false
 
-    _ct: null
-
     extendAttributesActions: () =>
       super()
 
@@ -287,23 +290,13 @@ module.exports = (env) ->
       @_setHue rstate.hue
       @_setSat rstate.sat
       @_setCt rstate.ct
-
-    changeCtTo: (ct) ->
-      hueState = hue.lightState.create().ct(ct)
-      return @hue.setLightState(hueState).then( ( => @_setCt ct) )
-
-    _setCt: (ct) ->
-      ct = parseFloat(ct)
-      assert not isNaN(ct)
-      assert 153 <= ct <= 500
-      unless @_ct is ct
-        @_ct = ct
-        @emit "ct", ct
-
-    getCt: -> Promise.join @lightStateInitialized, Promise.resolve( @_ct )
+  
+  extend HueZLLExtendedColorLight.prototype, ColorTempMixin
 
   class HueZLLExtendedColorLightGroup extends HueZLLExtendedColorLight
     HueClass: BaseHueLightGroup
     isGroup: true
+  
+  extend HueZLLExtendedColorLightGroup.prototype, ColorTempMixin
 
   return new HueZLLPlugin()
