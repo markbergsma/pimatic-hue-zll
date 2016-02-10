@@ -92,11 +92,14 @@ module.exports = (env) ->
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name
-      super(@config, @hueApi, @_pluginConfig)
+      @extendAttributesActions()
+      super()
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
+
+    extendAttributesActions: () =>
 
     # Wait on first poll on initialization
     getState: -> Promise.join @lightStateInitialized, super()
@@ -113,40 +116,48 @@ module.exports = (env) ->
     HueClass: BaseHueLightGroup
     isGroup: true
 
-  class HueZLLDimmableLight extends env.devices.DimmerActuator
+  class HueZLLDimmableLight extends HueZLLOnOffLight
     HueClass: BaseHueLight
     isGroup: false
 
-    newAttributes: {}
-    newActions: {}
+    _dimlevel: null
 
-    constructor: (@config, hueApi, @_pluginConfig) ->
-      @id = @config.id
-      @name = @config.name
-      @extendAttributesActions()
-      super(@config, @hueApi, @_pluginConfig)
-
-      @hue = new @HueClass(this, hueApi, @config.hueId)
-      @lightStateInitialized = @poll()
-      setInterval(( => @poll() ), @_pluginConfig.polling)
+    template: "dimmer"
 
     extendAttributesActions: () =>
+      super()
+
+      @attributes = extend (extend {}, @attributes),
+        dimlevel:
+          description: "The current dim level"
+          type: t.number
+          unit: "%"
+
+      @actions = extend (extend {}, @actions),
+        changeDimlevelTo:
+          description: "Sets the level of the dimmer"
+          params:
+            dimlevel:
+              type: t.number
 
     # Wait on first poll on initialization
-    getState: -> Promise.join @lightStateInitialized, super()
-    getDimlevel: -> Promise.join @lightStateInitialized, super()
+    getDimlevel: -> Promise.join @lightStateInitialized, Promise.resolve( @_dimlevel )
 
-    poll: -> @hue.poll().then(@_lightStateReceived)
-
-    _lightStateReceived: (rstate) => @_setDimlevel rstate.bri / 254 * 100
-
-    changeStateTo: (state) ->
-      hueState = hue.lightState.create().on(state)
-      return @hue.setLightState(hueState).then( ( => @_setState state) )
+    _lightStateReceived: (rstate) =>
+      super(rstate)
+      @_setDimlevel rstate.bri / 254 * 100
 
     changeDimlevelTo: (state) ->
-      hueState = hue.lightState.create().on(state != 0).bri(state / 100 * 254)
+      hueState = hue.lightState.create().bri(state / 100 * 254)
       return @hue.setLightState(hueState).then( ( => @_setDimlevel state) )
+
+    _setDimlevel: (level) =>
+      level = parseFloat(level)
+      assert(not isNaN(level))
+      assert 0 <= level <= 100
+      unless @_dimlevel is level
+        @_dimlevel = level
+        @emit "dimlevel", level
 
   class HueZLLDimmableLightGroup extends HueZLLDimmableLight
     HueClass: BaseHueLightGroup
@@ -189,7 +200,7 @@ module.exports = (env) ->
               type: t.number
 
     _lightStateReceived: (rstate) =>
-      @_setDimlevel rstate.bri / 254 * 100
+      super(rstate)
       @_setCt rstate.ct
 
   extend HueZLLColorTempLight.prototype, ColorTempMixin
@@ -231,7 +242,7 @@ module.exports = (env) ->
               type: t.number
 
     _lightStateReceived: (rstate) =>
-      @_setDimlevel rstate.bri / 254 * 100
+      super(rstate)
       @_setHue rstate.hue
       @_setSat rstate.sat
 
@@ -286,11 +297,9 @@ module.exports = (env) ->
               type: t.number
 
     _lightStateReceived: (rstate) =>
-      @_setDimlevel rstate.bri / 254 * 100
-      @_setHue rstate.hue
-      @_setSat rstate.sat
+      super(rstate)
       @_setCt rstate.ct
-  
+
   extend HueZLLExtendedColorLight.prototype, ColorTempMixin
 
   class HueZLLExtendedColorLightGroup extends HueZLLExtendedColorLight
