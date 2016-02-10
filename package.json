@@ -17,7 +17,8 @@
   "configSchema": "hue-zll-config-schema.coffee",
   "dependencies": {
     "es6-promise": "^3.0.2",
-    "node-hue-api": "^2.0.1"
+    "node-hue-api": "^2.0.1",
+    "spectrum-colorpicker": "^1.8.0"
   },
   "peerDependencies": {
     "pimatic": "0.8.*"

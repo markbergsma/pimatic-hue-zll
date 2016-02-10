@@ -1,0 +1,29 @@
+/* dimmer */
+li.sortable.huezlldimmable-device.no-header{
+  min-height: 30px;
+}
+
+/* dimmer slider */
+ul.items .ui-slider-input{
+  display: none;
+}
+
+ul.items .huezlldimmable-device div.item-inner .ui-slider-track {
+  margin-left: 22px;
+  margin-right: 8px;
+}
+
+ul.items .huezlldimmable-device .ui-slider {
+  margin: 8px 4px 2px 0;
+}
+
+@media (min-width:35em) {
+  ul.items .huezlldimmable-device .ui-slider {
+    margin: 1px 4px -1px 5px;
+    float: right;
+    width: 15em;
+  }
+  ul.items .huezlldimmable-device label {
+    float: left;
+  }
+}

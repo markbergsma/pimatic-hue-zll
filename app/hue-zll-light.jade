@@ -1,0 +1,71 @@
+script#huezlldimmable-template(type='text/template')
+  li.sortable.huezlldimmable-device.no-header
+    div.item-inner
+      label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
+      | 
+      div.ui-dimlevel
+        select.switch(data-bind="attr: { id: switchId }, value: switchState")
+          option(value="off")=__('Off')
+          option(value="on")=__('On')
+        | 
+        input.dimmer(min="0", max="100", step="1", data-highlight="true",
+          data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
+      | 
+      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+script#huezllcolortemp-template(type='text/template')
+  li.sortable.huezlldimmable-device.no-header
+    div.item-inner
+      label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
+      | 
+      div.ui-dimlevel
+        select.switch(data-bind="attr: { id: switchId }, value: switchState")
+          option(value="off")=__('Off')
+          option(value="on")=__('On')
+        | 
+        input.dimmer(min="0", max="100", step="1", data-highlight="true",
+          data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
+      | 
+      div.ui-color
+        input.dimmer(min="153", max="500", step="1", data-highlight="true",
+          data-bind="attr: { id: sliderCtId }, value: sliderCtValue")
+      | 
+      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+script#huezllcolor-template(type='text/template')
+  li.sortable.huezlldimmable-device.no-header
+    div.item-inner
+      label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
+      | 
+      div.ui-dimlevel
+        select.switch(data-bind="attr: { id: switchId }, value: switchState")
+          option(value="off")=__('Off')
+          option(value="on")=__('On')
+        | 
+        input.dimmer(min="0", max="100", step="1", data-highlight="true",
+          data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
+      | 
+      div.ui-color
+        div.ui-colorpicker
+          input.light-color()
+      | 
+      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+script#huezllextendedcolor-template(type='text/template')
+  li.sortable.huezlldimmable-device.no-header
+    div.item-inner
+      label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
+      | 
+      div.ui-dimlevel
+        select.switch(data-bind="attr: { id: switchId }, value: switchState")
+          option(value="off")=__('Off')
+          option(value="on")=__('On')
+        | 
+        input.dimmer(min="0", max="100", step="1", data-highlight="true",
+          data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
+      | 
+      div.ui-color
+        div.ui-colorpicker
+          input.light-color()
+        | 
+        input.dimmer(min="153", max="500", step="1", data-highlight="true",
+          data-bind="attr: { id: sliderCtId }, value: sliderCtValue")
+      | 
+      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")

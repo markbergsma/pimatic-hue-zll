@@ -54,6 +54,20 @@ module.exports = (env) ->
             createCallback: (deviceConfig) => new DeviceClass(deviceConfig, @hueApi, @config)
           })
 
+      @framework.on "after init", =>
+        # Check if the mobile-frontent was loaded and get a instance
+        mobileFrontend = @framework.pluginManager.getPlugin 'mobile-frontend'
+        if mobileFrontend?
+          mobileFrontend.registerAssetFile 'js',
+            "pimatic-hue-zll/node_modules/spectrum-colorpicker/spectrum.js"
+          mobileFrontend.registerAssetFile 'css',
+            "pimatic-hue-zll/node_modules/spectrum-colorpicker/spectrum.css"
+          mobileFrontend.registerAssetFile 'js', "pimatic-hue-zll/app/hue-zll-light.coffee"
+          mobileFrontend.registerAssetFile 'css', "pimatic-hue-zll/app/hue-zll-light.css"
+          mobileFrontend.registerAssetFile 'html', "pimatic-hue-zll/app/hue-zll-light.jade"
+        else
+          env.logger.warn "mobile-frontend not loaded, no gui will be available"
+
   class BaseHueLight
 
     constructor: (@device, @hueApi, @hueId) ->
@@ -122,7 +136,7 @@ module.exports = (env) ->
 
     _dimlevel: null
 
-    template: "dimmer"
+    template: "huezlldimmable"
 
     extendAttributesActions: () =>
       super()
@@ -184,6 +198,8 @@ module.exports = (env) ->
     HueClass: BaseHueLight
     isGroup: false
 
+    template: "huezllcolortemp"
+
     extendAttributesActions: () =>
       super()
 
@@ -218,6 +234,8 @@ module.exports = (env) ->
     _hue: null
     _sat: null
 
+    template: "huezllcolor"
+
     extendAttributesActions: () =>
       super()
 
@@ -251,7 +269,7 @@ module.exports = (env) ->
       return @hue.setLightState(hueState).then( ( => @_setHue hue) )
 
     changeSatTo: (sat) ->
-      hueState = hueapi.lightState.create().sat(hue)
+      hueState = hueapi.lightState.create().sat(sat)
       return @hue.setLightState(hueState).then( ( => @_setSat sat) )
 
     _setHue: (hueVal) ->
@@ -280,6 +298,8 @@ module.exports = (env) ->
   class HueZLLExtendedColorLight extends HueZLLColorLight
     HueClass: BaseHueLight
     isGroup: false
+
+    template: "huezllextendedcolor"
 
     extendAttributesActions: () =>
       super()
