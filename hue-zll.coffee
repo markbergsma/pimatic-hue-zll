@@ -254,21 +254,21 @@ module.exports = (env) ->
       hueState = hue.lightState.create().sat(hue)
       return @hue.setLightState(hueState).then( ( => @_setSat sat) )
 
-    _setHue: (hue) ->
-      hue = parseFloat(hue)
-      assert not isNaN(hue)
-      assert 0 <= hue <= 65535
-      unless @_hue is hue
-        @_hue = hue
-        @emit "hue", hue
+    _setHue: (hueVal) ->
+      hueVal = parseFloat(hueVal)
+      assert not isNaN(hueVal)
+      assert 0 <= hueVal <= 65535
+      unless @_hue is hueVal
+        @_hue = hueVal
+        @emit "hue", hueVal
 
-    _setSat: (sat) ->
-      sat = parseFloat(sat)
-      assert not isNaN(sat)
-      assert 0 <= sat <= 65535
-      unless @_sat is sat
-        @_sat = sat
-        @emit "sat", sat
+    _setSat: (satVal) ->
+      satVal = parseFloat(satVal)
+      assert not isNaN(satVal)
+      assert 0 <= satVal <= 254
+      unless @_sat is satVal
+        @_sat = satVal
+        @emit "sat", satVal
 
     getHue: -> Promise.join @lightStateInitialized, Promise.resolve( @_hue )
     getSat: -> Promise.join @lightStateInitialized, Promise.resolve( @_sat )
