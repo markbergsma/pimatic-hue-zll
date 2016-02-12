@@ -12,7 +12,7 @@ module.exports = (env) ->
 
   # node-hue-api needs es6-promise
   es6Promise = require 'es6-promise'
-  hue = require 'node-hue-api'
+  hueapi = require 'node-hue-api'
 
   # helper function to mix in key/value pairs from another object
   extend = (obj, mixin) ->
@@ -22,7 +22,7 @@ module.exports = (env) ->
   class HueZLLPlugin extends env.plugins.Plugin
 
     init: (app, @framework, @config) =>
-      @hueApi = new hue.HueApi(
+      @hueApi = new hueapi.HueApi(
         @config.host,
         @config.username
       )
@@ -57,12 +57,12 @@ module.exports = (env) ->
   class BaseHueLight
 
     constructor: (@device, @hueApi, @hueId) ->
-      @lightState = hue.lightState.create()
+      @lightState = hueapi.lightState.create()
 
     poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived)
 
     _stateReceived: (result) =>
-      newLightState = hue.lightState.create(result.state)
+      newLightState = hueapi.lightState.create(result.state)
       env.logger.debug("light #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
         "new state: #{JSON.stringify(newLightState._values)}")
       @lightState = newLightState
@@ -76,7 +76,7 @@ module.exports = (env) ->
     poll: -> @hueApi.getGroup(@hueId).then(@_stateReceived)
 
     _stateReceived: (result) =>
-      newGroupState = hue.lightState.create(result.lastAction)
+      newGroupState = hueapi.lightState.create(result.lastAction)
       env.logger.debug("group #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
         "new state: #{JSON.stringify(newGroupState._values)}")
       @lightState = newGroupState
@@ -109,7 +109,7 @@ module.exports = (env) ->
     _lightStateReceived: (rstate) => @_setState rstate.on
 
     changeStateTo: (state) ->
-      hueState = hue.lightState.create().on(state)
+      hueState = hueapi.lightState.create().on(state)
       return @hue.setLightState(hueState).then( ( => @_setState state) )
 
   class HueZLLOnOffLightGroup extends HueZLLOnOffLight
@@ -148,7 +148,7 @@ module.exports = (env) ->
       @_setDimlevel rstate.bri / 254 * 100
 
     changeDimlevelTo: (state) ->
-      hueState = hue.lightState.create().bri(state / 100 * 254)
+      hueState = hueapi.lightState.create().bri(state / 100 * 254)
       return @hue.setLightState(hueState).then( ( => @_setDimlevel state) )
 
     _setDimlevel: (level) =>
@@ -167,7 +167,7 @@ module.exports = (env) ->
     _ct: null    
 
     changeCtTo: (ct) ->
-      hueState = hue.lightState.create().ct(ct)
+      hueState = hueapi.lightState.create().ct(ct)
       return @hue.setLightState(hueState).then( ( => @_setCt ct) )
 
     _setCt: (ct) ->
@@ -247,11 +247,11 @@ module.exports = (env) ->
       @_setSat rstate.sat
 
     changeHueTo: (hue) ->
-      hueState = hue.lightState.create().hue(hue)
+      hueState = hueapi.lightState.create().hue(hue)
       return @hue.setLightState(hueState).then( ( => @_setHue hue) )
 
     changeSatTo: (sat) ->
-      hueState = hue.lightState.create().sat(hue)
+      hueState = hueapi.lightState.create().sat(hue)
       return @hue.setLightState(hueState).then( ( => @_setSat sat) )
 
     _setHue: (hueVal) ->
