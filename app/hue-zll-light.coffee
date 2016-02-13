@@ -84,17 +84,16 @@ $(document).on 'templateinit', (event) ->
         @_restoringState = false
 
     onSliderStop: ->
-      @sliderBriEle.slider('disable')
-      pimatic.loading(
-        "dimming-#{@sliderBriId}", "show", text: __("dimming to %s%", @sliderBriValue())
-      )
-      @device.rest.changeDimlevelTo( {dimlevel: @sliderBriValue()}, global: no).done(ajaxShowToast)
-      .fail( =>
-        pimatic.try => @sliderBriEle.val(@getAttribute('dimlevel').value()).slider('refresh')
-      ).always( =>
-        pimatic.loading "dimming-#{@sliderBriId}", "hide"
-        pimatic.try => @sliderBriEle.slider('enable')
-      ).fail(ajaxAlertFail)
+      unless parseInt(@sliderBriValue()) == parseInt(@getAttribute('dimlevel').value())
+        @sliderBriEle.slider('disable')
+        pimatic.loading(
+          "dimming-#{@sliderBriId}", "show", text: __("dimming to %s%", @sliderBriValue())
+        )
+        @device.rest.changeDimlevelTo( {dimlevel: parseInt(@sliderBriValue())}, global: no).done(ajaxShowToast)
+        .always( =>
+          pimatic.loading "dimming-#{@sliderBriId}", "hide"
+          pimatic.try => @sliderBriEle.slider('enable')
+        ).fail(ajaxAlertFail)
 
   ColorTempMixin =
     _constructCtSlider: (templData) ->
@@ -114,17 +113,16 @@ $(document).on 'templateinit', (event) ->
       $(elements).find('.ui-slider').addClass('no-carousel-slide')
 
     _ctSliderStopped: ->
-      @sliderCtEle.slider('disable')
-      pimatic.loading(
-        "colortemp-#{@sliderCtId}", "show", text: __("changing color temp to %s", @sliderCtValue())
-      )
-      @device.rest.changeCtTo( {ct: @sliderCtValue()}, global: no).done(ajaxShowToast)
-      .fail( =>
-        pimatic.try => @sliderCtEle.val(@getAttribute('ct').value()).slider('refresh')
-      ).always( =>
-        pimatic.loading "colortemp-#{@sliderCtId}", "hide"
-        pimatic.try => @sliderCtEle.slider('enable')
-      ).fail(ajaxAlertFail)
+      unless parseInt(@sliderCtValue()) == parseInt(@getAttribute('ct').value())
+        @sliderCtEle.slider('disable')
+        pimatic.loading(
+          "colortemp-#{@sliderCtId}", "show", text: __("changing color temp to %s", @sliderCtValue())
+        )
+        @device.rest.changeCtTo( {ct: parseInt(@sliderCtValue())}, global: no).done(ajaxShowToast)
+        .always( =>
+          pimatic.loading "colortemp-#{@sliderCtId}", "hide"
+          pimatic.try => @sliderCtEle.slider('enable')
+        ).fail(ajaxAlertFail)
 
   class HueZLLColorTempItem extends HueZLLDimmableItem
     constructor: (templData, @device) ->
@@ -137,7 +135,6 @@ $(document).on 'templateinit', (event) ->
 
     onSliderStop: ->
       super()
-      # FIXME: check which slider changed instead of processing all
       @_ctSliderStopped()
 
   extend HueZLLColorTempItem.prototype, ColorTempMixin
@@ -209,7 +206,6 @@ $(document).on 'templateinit', (event) ->
 
     onSliderStop: ->
       super()
-      # FIXME: check which slider changed instead of processing all
       @_ctSliderStopped()
 
   extend HueZLLExtendedColorItem.prototype, ColorTempMixin
