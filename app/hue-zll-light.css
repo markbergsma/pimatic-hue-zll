@@ -3,6 +3,10 @@ li.sortable.huezlllight-device.no-header{
   min-height: 30px;
 }
 
+li.sortable.huezlllight-device label {
+  float: left;
+}
+
 /* dimmer slider */
 ul.items .ui-slider-input{
   display: none;
