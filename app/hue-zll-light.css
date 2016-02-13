@@ -17,11 +17,77 @@ ul.items .huezlldimmable-device .ui-slider {
   margin: 8px 4px 2px 0;
 }
 
+ul.items .huezlldimmable-device .ui-colorpicker {
+  padding: 4px;
+  width: 5.875em;
+}
+
+/* Spectrum color picker */
+ul.items .huezlldimmable-device .ui-colorpicker div.sp-replacer {
+  margin-left: auto;
+  margin-right: auto;
+  border: 0px;
+  background: none;
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
+
+ul.items .huezlldimmable-device .ui-colorpicker div.sp-preview {
+  width: 94px; /* 65px; */
+  height: 28px;
+  border-color: #007dcd;
+  border-radius: 3em;
+  border-width: 2px;
+}
+
+ul.items .huezlldimmable-device .ui-colorpicker div.sp-preview-inner {
+  border-radius: inherit;;
+}
+
+ul.items .huezlldimmable-device .ui-colorpicker div.sp-dd {
+  display: none;
+}
+
+ul.items .huezlldimmable-device .ui-dimlevel {
+  display: inline-block;
+  float: right;
+}
+
+/* Dimlevel slider uses an alpha gradient */
+ul.items .huezlldimmable-device .ui-dimlevel .ui-slider-track {
+  background: linear-gradient(to right, rgba(0, 125, 205, 0), rgba(0, 125, 205, 1));
+}
+ul.items .huezlldimmable-device .ui-dimlevel .ui-slider-bg {
+  background: none;
+}
+
+ul.items .huezlldimmable-device .ui-color .ui-slider {
+  margin-top: 6px;
+}
+
+/* Color Temp slider uses a gradient */
+ul.items .huezlldimmable-device .ui-color .ui-slider-track {
+  background: linear-gradient(to right, hsl(195, 100%, 85%), White, hsl(51, 100%, 85%));
+}
+ul.items .huezlldimmable-device .ui-color .ui-slider-bg {
+  background: none;
+}
+
+ul.items .huezlldimmable-device .ui-color {
+  display: inline-block;
+  float: right;
+  clear: right;
+}
+
+
 @media (min-width:35em) {
   ul.items .huezlldimmable-device .ui-slider {
     margin: 1px 4px -1px 5px;
     float: right;
     width: 15em;
+  }
+  ul.items .huezlldimmable-device .ui-colorpicker {
+    float: right;
   }
   ul.items .huezlldimmable-device label {
     float: left;
