@@ -11,7 +11,7 @@ script#huezlldimmable-template(type='text/template')
         input.dimmer(min="0", max="100", step="1", data-highlight="true",
           data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
       | 
-      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+      span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezllcolortemp-template(type='text/template')
   li.sortable.huezlllight-device.no-header
     div.item-inner
@@ -29,7 +29,7 @@ script#huezllcolortemp-template(type='text/template')
         input.dimmer(min="153", max="500", step="1", data-highlight="true",
           data-bind="attr: { id: sliderCtId }, value: sliderCtValue")
       | 
-      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+      span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezllcolor-template(type='text/template')
   li.sortable.huezlllight-device.no-header
     div.item-inner
@@ -47,7 +47,7 @@ script#huezllcolor-template(type='text/template')
         div.ui-colorpicker
           input.light-color()
       | 
-      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+      span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezllextendedcolor-template(type='text/template')
   li.sortable.huezlllight-device.no-header
     div.item-inner
@@ -68,4 +68,8 @@ script#huezllextendedcolor-template(type='text/template')
         input.dimmer(min="153", max="500", step="1", data-highlight="true",
           data-bind="attr: { id: sliderCtId }, value: sliderCtValue")
       | 
-      span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+      span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
+script#huezlllight-attribute-template(type='text/template')
+  <!-- ko if: $data.name !== 'state' && $data.name !== 'dimlevel' && $data.name !== 'ct' && $data.name !== 'hue' && $data.name !== 'sat' -->
+  <!-- ko template: {name: 'attribute-template', data: $data} --><!-- /ko -->
+  <!-- /ko -->
