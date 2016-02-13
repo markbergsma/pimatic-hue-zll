@@ -82,8 +82,16 @@ module.exports = (env) ->
       @lightState = newLightState
       return result.state
 
+    _mergeLightState: (stateChange) ->
+      @lightState._values[k] = v for k, v of stateChange._values
+      @lightState
+
+    createLightState: -> hueapi.lightState.create()
+    getLightState: -> @lightState
+
     setLightState: (hueState) ->
-      @hueApi.setLightState(@hueId, hueState).then( ( => @lightState = hueState) )
+      env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState))
+      @hueApi.setLightState(@hueId, hueState).then( ( => @_mergeLightState hueState) )
 
   class BaseHueLightGroup extends BaseHueLight
 
@@ -97,7 +105,8 @@ module.exports = (env) ->
       return result.lastAction
 
     setLightState: (hueState) ->
-      @hueApi.setGroupLightState(@hueId, hueState).then( ( => @lightState = hueState) )
+      env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState))
+      @hueApi.setGroupLightState(@hueId, hueState).then( ( => @_mergeLightState hueState) )
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
@@ -123,7 +132,7 @@ module.exports = (env) ->
     _lightStateReceived: (rstate) => @_setState rstate.on
 
     changeStateTo: (state) ->
-      hueState = hueapi.lightState.create().on(state)
+      hueState = @hue.createLightState().on(state)
       return @hue.setLightState(hueState).then( ( => @_setState state) )
 
   class HueZLLOnOffLightGroup extends HueZLLOnOffLight
@@ -162,7 +171,7 @@ module.exports = (env) ->
       @_setDimlevel rstate.bri / 254 * 100
 
     changeDimlevelTo: (state) ->
-      hueState = hueapi.lightState.create().bri(state / 100 * 254)
+      hueState = @hue.createLightState().bri(state / 100 * 254)
       return @hue.setLightState(hueState).then( ( => @_setDimlevel state) )
 
     _setDimlevel: (level) =>
@@ -181,7 +190,7 @@ module.exports = (env) ->
     _ct: null    
 
     changeCtTo: (ct) ->
-      hueState = hueapi.lightState.create().ct(ct)
+      hueState = @hue.createLightState().ct(ct)
       return @hue.setLightState(hueState).then( ( => @_setCt ct) )
 
     _setCt: (ct) ->
@@ -265,11 +274,11 @@ module.exports = (env) ->
       @_setSat rstate.sat
 
     changeHueTo: (hue) ->
-      hueState = hueapi.lightState.create().hue(hue)
+      hueState = @hue.createLightState().hue(hue)
       return @hue.setLightState(hueState).then( ( => @_setHue hue) )
 
     changeSatTo: (sat) ->
-      hueState = hueapi.lightState.create().sat(sat)
+      hueState = @hue.createLightState().sat(sat)
       return @hue.setLightState(hueState).then( ( => @_setSat sat) )
 
     _setHue: (hueVal) ->
