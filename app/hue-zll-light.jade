@@ -1,5 +1,5 @@
 script#huezlldimmable-template(type='text/template')
-  li.sortable.huezlldimmable-device.no-header
+  li.sortable.huezlllight-device.no-header
     div.item-inner
       label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
       | 
@@ -13,7 +13,7 @@ script#huezlldimmable-template(type='text/template')
       | 
       span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezllcolortemp-template(type='text/template')
-  li.sortable.huezlldimmable-device.no-header
+  li.sortable.huezlllight-device.no-header
     div.item-inner
       label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
       | 
@@ -31,7 +31,7 @@ script#huezllcolortemp-template(type='text/template')
       | 
       span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezllcolor-template(type='text/template')
-  li.sortable.huezlldimmable-device.no-header
+  li.sortable.huezlllight-device.no-header
     div.item-inner
       label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
       | 
@@ -49,7 +49,7 @@ script#huezllcolor-template(type='text/template')
       | 
       span.attributes(data-bind="template: { name: 'dimmer-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezllextendedcolor-template(type='text/template')
-  li.sortable.huezlldimmable-device.no-header
+  li.sortable.huezlllight-device.no-header
     div.item-inner
       label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
       | 
