@@ -18,8 +18,8 @@ ul.items .huezlllight-device .ui-slider {
 }
 
 ul.items .huezlllight-device .ui-dimlevel {
-  display: inline-block;
   float: right;
+  min-height: 30px;
 }
 
 /* Dimlevel slider uses an alpha gradient */
@@ -34,39 +34,39 @@ ul.items .huezlllight-device .ui-dimlevel .ui-slider-bg {
 
 
 ul.items .huezlllight-device .ui-colorpicker {
-  padding: 4px;
+  display: inline-block;
   width: 5.875em;
+  margin-left: 10px;
+  background-clip: padding-box;
+  box-shadow: 0px 0px 0px 2px #007dcd;
+  border-radius: 3em;
 }
 
 /* Spectrum color picker */
 ul.items .huezlllight-device .ui-colorpicker div.sp-replacer {
+  height: 1.75em;
   margin-left: auto;
   margin-right: auto;
   border: 0px;
   background: none;
-  padding-top: 0px;
-  padding-bottom: 0px;
+  padding: 0px;
+  min-height: 30px;
 }
 
 ul.items .huezlllight-device .ui-colorpicker div.sp-preview {
-  width: 94px; /* 65px; */
-  height: 28px;
+  width: 94px;
+  height: 100%;
   border-color: #007dcd;
   border-radius: 3em;
-  border-width: 2px;
+  border-width: 0px;
 }
 
 ul.items .huezlllight-device .ui-colorpicker div.sp-preview-inner {
-  border-radius: inherit;;
+  border-radius: inherit;
 }
 
 ul.items .huezlllight-device .ui-colorpicker div.sp-dd {
   display: none;
-}
-
-
-ul.items .huezlllight-device .ui-color .ui-slider {
-  margin-top: 6px;
 }
 
 /* Color Temp slider uses a gradient */
@@ -78,9 +78,10 @@ ul.items .huezlllight-device .ui-color .ui-slider-bg {
 }
 
 ul.items .huezlllight-device .ui-color {
-  display: inline-block;
   float: right;
   clear: right;
+  min-height: 30px;
+  margin-top: 5px;
 }
 
 
