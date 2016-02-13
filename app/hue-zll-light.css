@@ -69,6 +69,13 @@ ul.items .huezlllight-device .ui-colorpicker div.sp-dd {
   display: none;
 }
 
+ul.items .huezlllight-device div.ui-colorpicker-spacer {
+  width: 94px;
+  height: 30px;
+  margin-left: 10px;
+  float: right;
+}
+
 /* Color Temp slider uses a gradient */
 ul.items .huezlllight-device .ui-color .ui-slider-track {
   background: linear-gradient(to right, hsl(195, 100%, 85%), White, hsl(51, 100%, 85%));

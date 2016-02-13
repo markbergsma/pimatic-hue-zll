@@ -26,6 +26,8 @@ script#huezllcolortemp-template(type='text/template')
           data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
       | 
       div.ui-color
+        div.ui-colorpicker-spacer
+        | 
         input.dimmer(min="153", max="500", step="1", data-highlight="true",
           data-bind="attr: { id: sliderCtId }, value: sliderCtValue")
       | 
