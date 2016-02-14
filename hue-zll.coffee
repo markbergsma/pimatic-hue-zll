@@ -75,12 +75,26 @@ module.exports = (env) ->
 
     poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived)
 
+    _diffState: (newLightState) ->
+      diff = {}
+      diff[k] = v for k, v of newLightState._values when (
+          not @lightState._values[k]? or
+          k == 'xy' and ((v[0] != @lightState._values['xy'][0]) or
+            (v[1] != @lightState._values['xy'][1])) or
+          (k != 'xy' and @lightState._values[k] != v))
+      return diff
+
     _stateReceived: (result) =>
       newLightState = hueapi.lightState.create(result.state)
-      env.logger.debug("light #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
-        "new state: #{JSON.stringify(newLightState._values)}")
-      @lightState = newLightState
-      return result.state
+      try
+        diff = @_diffState(newLightState)
+        if Object.keys(diff).length > 0
+          env.logger.debug("light #{@hueId} state change: " + JSON.stringify(diff))
+      catch error
+        env.logger.warn(error)
+      finally
+        @lightState = newLightState
+        return result.state
 
     _mergeLightState: (stateChange) ->
       @lightState._values[k] = v for k, v of stateChange._values
@@ -99,10 +113,15 @@ module.exports = (env) ->
 
     _stateReceived: (result) =>
       newGroupState = hueapi.lightState.create(result.lastAction)
-      env.logger.debug("group #{@hueId} old state: #{JSON.stringify(@lightState._values)}   " +
-        "new state: #{JSON.stringify(newGroupState._values)}")
-      @lightState = newGroupState
-      return result.lastAction
+      try
+        diff = @_diffState(newGroupState)
+        if Object.keys(diff).length > 0
+          env.logger.debug("group #{@hueId} state change: " + JSON.stringify(diff))
+      catch error
+        env.logger.warn(error)
+      finally
+        @lightState = newGroupState
+        return result.lastAction
 
     setLightState: (hueState) ->
       env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState))
