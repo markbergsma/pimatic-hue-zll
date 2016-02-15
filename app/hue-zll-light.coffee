@@ -22,7 +22,7 @@ $(document).on 'templateinit', (event) ->
       stateAttribute.value.subscribe( (newState) =>
         @_restoringState = true
         @switchState(if newState then 'on' else 'off')
-        pimatic.try => @sliderEle.flipswitch('refresh')
+        pimatic.try => @switchEle.flipswitch('refresh')
         @_restoringState = false
       )
       dimAttribute.value.subscribe( (newDimlevel) =>
