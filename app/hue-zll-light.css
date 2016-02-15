@@ -60,7 +60,6 @@ ul.items .huezlllight-device .ui-colorpicker div.sp-replacer {
 ul.items .huezlllight-device .ui-colorpicker div.sp-preview {
   width: 94px;
   height: 100%;
-  border-color: #007dcd;
   border-radius: 3em;
   border-width: 0px;
 }
@@ -75,6 +74,17 @@ ul.items .huezlllight-device .ui-colorpicker div.sp-preview-inner {
 
 ul.items .huezlllight-device .ui-colorpicker div.sp-dd {
   display: none;
+}
+
+/* Override Spectrum's value gradient to be invisible, as we ignore it anyway */
+div.sp-container div.sp-sat div.sp-val {
+  background-image: none;
+}
+
+div.sp-container {
+  box-shadow: 0px 0px 0px 2px #007dcd;
+  border: 0px;
+  background-color: white;
 }
 
 ul.items .huezlllight-device div.ui-colorpicker-spacer {
@@ -96,5 +106,5 @@ ul.items .huezlllight-device .ui-color {
   float: right;
   clear: right;
   min-height: 30px;
-  margin-top: 5px;
+  margin-top: 8px;
 }
