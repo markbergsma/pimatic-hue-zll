@@ -201,8 +201,8 @@ $(document).on 'templateinit', (event) ->
       hueVal = parseInt(color.toHsv()['h'] / 360 * 65535)
       satVal = parseInt(color.toHsv()['s'] * 254)
 
-      @device.rest.changeHueTo( {hue: hueVal}, global: no ).done(ajaxShowToast).fail(ajaxAlertFail)
-      @device.rest.changeSatTo( {sat: satVal}, global: no ).done(ajaxShowToast).fail(ajaxAlertFail)
+      @device.rest.changeHueSatTo( {hue: hueVal, sat: satVal}, global: no
+        ).done(ajaxShowToast).fail(ajaxAlertFail)
 
     _toggleColorPickerDisable: (newState) =>
       @colorPicker.spectrum(if newState then 'enable' else 'disable')

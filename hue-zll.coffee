@@ -292,6 +292,13 @@ module.exports = (env) ->
           params:
             sat:
               type: t.number
+        changeHueSatTo:
+          description: "changes the color hue and saturation"
+          params:
+            hue:
+              type: t.number
+            sat:
+              type: t.number
 
     _lightStateReceived: (rstate) =>
       super(rstate)
@@ -309,6 +316,14 @@ module.exports = (env) ->
       hueState = @hue.createLightState().on(true).sat(sat)
       return @hue.setLightState(hueState).then( ( =>
         @_setState true
+        @_setSat sat
+      ) )
+
+    changeHueSatTo: (hue, sat) ->
+      hueState = @hue.createLightState().on(true).hue(hue).sat(sat)
+      return @hue.setLightState(hueState).then( ( =>
+        @_setState true
+        @_setHue hue
         @_setSat sat
       ) )
 
