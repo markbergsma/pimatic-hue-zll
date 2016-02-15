@@ -19,12 +19,7 @@ $(document).on 'templateinit', (event) ->
 
       @switchState = ko.observable(if stateAttribute.value() then 'on' else 'off')
       @sliderBriValue = ko.observable(if dimAttribute.value()? then dimAttribute.value() else 0)
-      stateAttribute.value.subscribe( (newState) =>
-        @_restoringState = true
-        @switchState(if newState then 'on' else 'off')
-        pimatic.try => @switchEle.flipswitch('refresh')
-        @_restoringState = false
-      )
+      stateAttribute.value.subscribe(@_onStateChange)
       dimAttribute.value.subscribe( (newDimlevel) =>
         @sliderBriValue(newDimlevel)
         pimatic.try => @sliderBriEle.slider('refresh')
@@ -35,7 +30,7 @@ $(document).on 'templateinit', (event) ->
       @switchEle = $(elements).find('select')
       @switchEle.flipswitch()
       @sliderBriEle = $(elements).find('#' + @sliderBriId)
-      @sliderBriEle.slider()
+      @sliderBriEle.slider(disabled: @getAttribute('state').value() is off)
 
       state = @getAttribute('state')
       if state.labels?
@@ -95,6 +90,13 @@ $(document).on 'templateinit', (event) ->
           pimatic.try => @sliderBriEle.slider('enable')
         ).fail(ajaxAlertFail)
 
+    _onStateChange: (newState) =>
+       @_restoringState = true
+       @switchState(if newState then 'on' else 'off')
+       pimatic.try => @switchEle.flipswitch('refresh')
+       @_restoringState = false
+       @sliderBriEle.slider(if newState then 'enable' else 'disable')
+
   ColorTempMixin =
     _constructCtSlider: (templData) ->
       @sliderCtId = "ct-#{templData.deviceId}"
@@ -109,7 +111,7 @@ $(document).on 'templateinit', (event) ->
 
     _initCtSlider: (elements) ->
       @sliderCtEle = $(elements).find('#' + @sliderCtId)
-      @sliderCtEle.slider()
+      @sliderCtEle.slider(disabled: @getAttribute('state').value() is off)
       $(elements).find('.ui-slider').addClass('no-carousel-slide')
 
     _ctSliderStopped: ->
@@ -137,6 +139,10 @@ $(document).on 'templateinit', (event) ->
       super()
       @_ctSliderStopped()
 
+    _onStateChange: (newState) =>
+      super(newState)
+      @sliderCtEle.slider(if newState then 'enable' else 'disable')
+
   extend HueZLLColorTempItem.prototype, ColorTempMixin
 
   class HueZLLColorItem extends HueZLLDimmableItem
@@ -160,7 +166,8 @@ $(document).on 'templateinit', (event) ->
 
     afterRender: (elements) ->
       super(elements)
-      @colorPicker = $(elements).find('.light-color')
+      @colorPickerEle = $(elements).find('.ui-colorpicker')
+      @colorPicker = @colorPickerEle.find('.light-color')
       @colorPicker.spectrum(
         color: @colorFromHueSat()
         preferredFormat: 'hsv'
@@ -172,10 +179,12 @@ $(document).on 'templateinit', (event) ->
         hideAfterPaletteSelect: true
         localStorageKey: "spectrum.pimatic-hue-zll"
         allowEmpty: false
+        disabled: @getAttribute('state').value() is off
         move: (color) =>
           @_updateColorPicker()
           @_changeColor(color)
       )
+      @_toggleColorPickerDisable(@getAttribute('state').value())
 
     colorFromHueSat: ->
       hue = @getAttribute('hue').value() / 65535 * 360
@@ -195,6 +204,15 @@ $(document).on 'templateinit', (event) ->
       @device.rest.changeHueTo( {hue: hueVal}, global: no ).done(ajaxShowToast).fail(ajaxAlertFail)
       @device.rest.changeSatTo( {sat: satVal}, global: no ).done(ajaxShowToast).fail(ajaxAlertFail)
 
+    _toggleColorPickerDisable: (newState) =>
+      @colorPicker.spectrum(if newState then 'enable' else 'disable')
+      @colorPickerEle.toggleClass('ui-state-disabled', newState is off)
+      @colorPickerEle.find(".sp-preview").toggleClass('ui-state-disabled', newState is off)
+
+    _onStateChange: (newState) =>
+      super(newState)
+      @_toggleColorPickerDisable(newState)
+
   class HueZLLExtendedColorItem extends HueZLLColorItem
     constructor: (templData, @device) ->
       super(templData, @device)
@@ -207,6 +225,10 @@ $(document).on 'templateinit', (event) ->
     onSliderStop: ->
       super()
       @_ctSliderStopped()
+
+    _onStateChange: (newState) =>
+      super(newState)
+      @sliderCtEle.slider(if newState then 'enable' else 'disable')
 
   extend HueZLLExtendedColorItem.prototype, ColorTempMixin
 
