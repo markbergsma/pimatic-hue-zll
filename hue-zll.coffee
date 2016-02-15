@@ -190,8 +190,11 @@ module.exports = (env) ->
       @_setDimlevel rstate.bri / 254 * 100
 
     changeDimlevelTo: (state) ->
-      hueState = @hue.createLightState().bri(state / 100 * 254)
-      return @hue.setLightState(hueState).then( ( => @_setDimlevel state) )
+      hueState = @hue.createLightState().on(true).bri(state / 100 * 254)
+      return @hue.setLightState(hueState).then( ( =>
+        @_setState true
+        @_setDimlevel state
+      ) )
 
     _setDimlevel: (level) =>
       level = parseFloat(level)
@@ -209,8 +212,11 @@ module.exports = (env) ->
     _ct: null    
 
     changeCtTo: (ct) ->
-      hueState = @hue.createLightState().ct(ct)
-      return @hue.setLightState(hueState).then( ( => @_setCt ct) )
+      hueState = @hue.createLightState().on(true).ct(ct)
+      return @hue.setLightState(hueState).then( ( =>
+        @_setState true
+        @_setCt ct
+      ) )
 
     _setCt: (ct) ->
       ct = parseFloat(ct)
@@ -293,12 +299,18 @@ module.exports = (env) ->
       @_setSat rstate.sat
 
     changeHueTo: (hue) ->
-      hueState = @hue.createLightState().hue(hue)
-      return @hue.setLightState(hueState).then( ( => @_setHue hue) )
+      hueState = @hue.createLightState().on(true).hue(hue)
+      return @hue.setLightState(hueState).then( ( =>
+        @_setState true
+        @_setHue hue
+      ) )
 
     changeSatTo: (sat) ->
-      hueState = @hue.createLightState().sat(sat)
-      return @hue.setLightState(hueState).then( ( => @_setSat sat) )
+      hueState = @hue.createLightState().on(true).sat(sat)
+      return @hue.setLightState(hueState).then( ( =>
+        @_setState true
+        @_setSat sat
+      ) )
 
     _setHue: (hueVal) ->
       hueVal = parseFloat(hueVal)
