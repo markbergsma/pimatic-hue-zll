@@ -129,7 +129,6 @@ module.exports = (env) ->
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
-    isGroup: false
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
@@ -156,11 +155,9 @@ module.exports = (env) ->
 
   class HueZLLOnOffLightGroup extends HueZLLOnOffLight
     HueClass: BaseHueLightGroup
-    isGroup: true
 
   class HueZLLDimmableLight extends HueZLLOnOffLight
     HueClass: BaseHueLight
-    isGroup: false
 
     _dimlevel: null
 
@@ -206,7 +203,6 @@ module.exports = (env) ->
 
   class HueZLLDimmableLightGroup extends HueZLLDimmableLight
     HueClass: BaseHueLightGroup
-    isGroup: true
 
   ColorTempMixin =
     _ct: null    
@@ -230,7 +226,6 @@ module.exports = (env) ->
 
   class HueZLLColorTempLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
-    isGroup: false
 
     template: "huezllcolortemp"
 
@@ -257,13 +252,11 @@ module.exports = (env) ->
 
   class HueZLLColorTempLightGroup extends HueZLLColorTempLight
     HueClass: BaseHueLightGroup
-    isGroup: true
 
   extend HueZLLColorTempLightGroup.prototype, ColorTempMixin
 
   class HueZLLColorLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
-    isGroup: false
 
     _hue: null
     _sat: null
@@ -348,11 +341,9 @@ module.exports = (env) ->
 
   class HueZLLColorLightGroup extends HueZLLColorLight
     HueClass: BaseHueLightGroup
-    isGroup: true
 
   class HueZLLExtendedColorLight extends HueZLLColorLight
     HueClass: BaseHueLight
-    isGroup: false
 
     template: "huezllextendedcolor"
 
@@ -379,7 +370,6 @@ module.exports = (env) ->
 
   class HueZLLExtendedColorLightGroup extends HueZLLExtendedColorLight
     HueClass: BaseHueLightGroup
-    isGroup: true
   
   extend HueZLLExtendedColorLightGroup.prototype, ColorTempMixin
 
