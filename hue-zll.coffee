@@ -29,11 +29,12 @@ module.exports = (env) ->
         @config.port
       )
 
-      @hueApi.version (err, version) =>
+      @hueApi.version().then(( (version) =>
         env.logger.info("Connected to bridge #{version['name']}, " +
           "API version #{version['version']['api']}, software #{version['version']['software']}")
-      @hueApi.lights (err, lights) => env.logger.debug(lights)
-      @hueApi.groups (err, groups) => env.logger.debug(groups)
+      ), @_hueApiRequestFailed)
+      @hueApi.lights().then(env.logger.debug, @_hueApiRequestFailed)
+      @hueApi.groups().then(env.logger.debug, @_hueApiRequestFailed)
 
       deviceConfigDef = require("./device-config-schema")
 
@@ -70,12 +71,16 @@ module.exports = (env) ->
         else
           env.logger.warn "mobile-frontend not loaded, no gui will be available"
 
+    _hueApiRequestFailed: (error) ->
+      env.logger.error("Hue API request failed!", error.message)
+      return error
+
   class BaseHueLight
 
     constructor: (@device, @hueApi, @hueId) ->
       @lightState = hueapi.lightState.create()
 
-    poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived)
+    poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived, @_apiError)
 
     _diffState: (newLightState) ->
       diff = {}
@@ -106,12 +111,16 @@ module.exports = (env) ->
     getLightState: -> @lightState
 
     setLightState: (hueState) ->
-      env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState))
-      @hueApi.setLightState(@hueId, hueState).then( ( => @_mergeLightState hueState) )
+      env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState._values))
+      @hueApi.setLightState(@hueId, hueState).then(( => @_mergeLightState hueState), @_apiError)
+
+    _apiError: (error) ->
+      env.logger.error("Hue API request failed:", error.message)
+      return error
 
   class BaseHueLightGroup extends BaseHueLight
 
-    poll: -> @hueApi.getGroup(@hueId).then(@_stateReceived)
+    poll: -> @hueApi.getGroup(@hueId).then(@_stateReceived, @_apiError)
 
     _stateReceived: (result) =>
       newGroupState = hueapi.lightState.create(result.lastAction)
@@ -126,8 +135,9 @@ module.exports = (env) ->
         return result.lastAction
 
     setLightState: (hueState) ->
-      env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState))
-      @hueApi.setGroupLightState(@hueId, hueState).then( ( => @_mergeLightState hueState) )
+      env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState._values))
+      @hueApi.setGroupLightState(@hueId, hueState).then(
+        ( => @_mergeLightState hueState), @_apiError)
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
