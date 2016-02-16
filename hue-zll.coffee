@@ -24,7 +24,9 @@ module.exports = (env) ->
     init: (app, @framework, @config) =>
       @hueApi = new hueapi.HueApi(
         @config.host,
-        @config.username
+        @config.username,
+        @config.timeout,
+        @config.port
       )
 
       @hueApi.version (err, version) =>

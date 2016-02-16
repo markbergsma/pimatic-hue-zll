@@ -9,6 +9,14 @@ module.exports = {
     host:
       description: "Hostname or IP address of the Hue bridge"
       type: "string"
+    port:
+      description: "Hue Bridge TCP port number"
+      type: "integer"
+      default: 80
+    timeout:
+      description: "Timeout (ms) for sending API requests to the Hue bridge"
+      type: "integer"
+      default: 0
     polling:
       description: "Default polling interval (ms)"
       type: "integer"
