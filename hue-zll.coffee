@@ -155,7 +155,7 @@ module.exports = (env) ->
     extendAttributesActions: () =>
 
     # Wait on first poll on initialization
-    getState: -> Promise.join @lightStateInitialized, super()
+    getState: -> @lightStateInitialized.then(super)
 
     poll: -> @hue.poll().then(@_lightStateReceived)
 
@@ -192,7 +192,7 @@ module.exports = (env) ->
               type: t.number
 
     # Wait on first poll on initialization
-    getDimlevel: -> Promise.join @lightStateInitialized, Promise.resolve( @_dimlevel )
+    getDimlevel: -> Promise.join @lightStateInitialized, ( => @_dimlevel )
 
     _lightStateReceived: (rstate) =>
       super(rstate)
@@ -234,7 +234,7 @@ module.exports = (env) ->
         @_ct = ct
         @emit "ct", ct
 
-    getCt: -> Promise.join @lightStateInitialized, Promise.resolve( @_ct )
+    getCt: -> Promise.join @lightStateInitialized, ( => @_ct )
 
   class HueZLLColorTempLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
@@ -348,8 +348,8 @@ module.exports = (env) ->
         @_sat = satVal
         @emit "sat", satVal
 
-    getHue: -> Promise.join @lightStateInitialized, Promise.resolve( @_hue )
-    getSat: -> Promise.join @lightStateInitialized, Promise.resolve( @_sat )
+    getHue: -> Promise.join @lightStateInitialized, ( => @_hue )
+    getSat: -> Promise.join @lightStateInitialized, ( => @_sat )
 
   class HueZLLColorLightGroup extends HueZLLColorLight
     HueClass: BaseHueLightGroup
