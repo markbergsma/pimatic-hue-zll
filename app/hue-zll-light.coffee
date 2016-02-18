@@ -12,10 +12,13 @@ $(document).on 'templateinit', (event) ->
       @sliderBriId = "bri-#{templData.deviceId}"
       stateAttribute = @getAttribute('state')
       dimAttribute = @getAttribute('dimlevel')
+      reachableAttribute = @getAttribute('reachable')
       unless stateAttribute?
         throw new Error("A switch device needs a state attribute!")
       unless dimAttribute?
         throw new Error("A dimmer device needs a dimlevel attribute!")
+      unless reachableAttribute?
+        throw new Error("A Hue light needs a reachable attribute!")
 
       @switchState = ko.observable(if stateAttribute.value() then 'on' else 'off')
       @sliderBriValue = ko.observable(if dimAttribute.value()? then dimAttribute.value() else 0)
@@ -24,20 +27,24 @@ $(document).on 'templateinit', (event) ->
         @sliderBriValue(newDimlevel)
         pimatic.try => @sliderBriEle.slider('refresh')
       )
+      # FIXME: OnOff lights need this as well
+      reachableAttribute.value.subscribe(@_onReachableChange)
 
     afterRender: (elements) ->
       super(elements)
       @switchEle = $(elements).find('select')
-      @switchEle.flipswitch()
+      @switchEle.flipswitch(disabled: @getAttribute('reachable').value() is false)
       @sliderBriEle = $(elements).find('#' + @sliderBriId)
-      @sliderBriEle.slider(disabled: @getAttribute('state').value() is off)
+      @sliderBriEle.slider(disabled: @_disableInputs())
 
       state = @getAttribute('state')
       if state.labels?
         capitaliseFirstLetter = (s) -> s.charAt(0).toUpperCase() + s.slice(1)
         @switchEle.find('option[value=on]').text(capitaliseFirstLetter state.labels[0])
         @switchEle.find('option[value=off]').text(capitaliseFirstLetter state.labels[1])
-      $(elements).find('.ui-flipswitch').addClass('no-carousel-slide')
+      $(elements).find('.ui-flipswitch')
+        .addClass('no-carousel-slide')
+        .toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
       $(elements).find('.ui-slider').addClass('no-carousel-slide')
 
     onSwitchChange: ->
@@ -90,12 +97,20 @@ $(document).on 'templateinit', (event) ->
           pimatic.try => @sliderBriEle.slider('enable')
         ).fail(ajaxAlertFail)
 
+    _disableInputs: =>
+      (@getAttribute('reachable').value() is false) or (@getAttribute('state').value() is off)
+
     _onStateChange: (newState) =>
        @_restoringState = true
        @switchState(if newState then 'on' else 'off')
        pimatic.try => @switchEle.flipswitch('refresh')
        @_restoringState = false
-       @sliderBriEle.slider(if newState then 'enable' else 'disable')
+       @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
+
+    _onReachableChange: (nowReachable) =>
+      @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
+      @switchEle.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
+      @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   ColorTempMixin =
     _constructCtSlider: (templData) ->
@@ -111,7 +126,7 @@ $(document).on 'templateinit', (event) ->
 
     _initCtSlider: (elements) ->
       @sliderCtEle = $(elements).find('#' + @sliderCtId)
-      @sliderCtEle.slider(disabled: @getAttribute('state').value() is off)
+      @sliderCtEle.slider(disabled: @_disableInputs())
       $(elements).find('.ui-slider').addClass('no-carousel-slide')
 
     _ctSliderStopped: ->
@@ -141,7 +156,11 @@ $(document).on 'templateinit', (event) ->
 
     _onStateChange: (newState) =>
       super(newState)
-      @sliderCtEle.slider(if newState then 'enable' else 'disable')
+      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
+
+    _onReachableChange: (nowReachable) =>
+      super(nowReachable)
+      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   extend HueZLLColorTempItem.prototype, ColorTempMixin
 
@@ -179,7 +198,7 @@ $(document).on 'templateinit', (event) ->
         hideAfterPaletteSelect: true
         localStorageKey: "spectrum.pimatic-hue-zll"
         allowEmpty: false
-        disabled: @getAttribute('state').value() is off
+        disabled: @_disableInputs()
         move: (color) =>
           @_updateColorPicker()
           @_changeColor(color)
@@ -204,14 +223,19 @@ $(document).on 'templateinit', (event) ->
       @device.rest.changeHueSatTo( {hue: hueVal, sat: satVal}, global: no
         ).done(ajaxShowToast).fail(ajaxAlertFail)
 
-    _toggleColorPickerDisable: (newState) =>
-      @colorPicker.spectrum(if newState then 'enable' else 'disable')
-      @colorPickerEle.toggleClass('ui-state-disabled', newState is off)
-      @colorPickerEle.find(".sp-preview").toggleClass('ui-state-disabled', newState is off)
+    _toggleColorPickerDisable: =>
+      disable = @_disableInputs()
+      @colorPicker.spectrum(if disable then 'disable' else 'enable')
+      @colorPickerEle.toggleClass('ui-state-disabled', disable)
+      @colorPickerEle.find(".sp-preview").toggleClass('ui-state-disabled', disable)
 
     _onStateChange: (newState) =>
       super(newState)
-      @_toggleColorPickerDisable(newState)
+      @_toggleColorPickerDisable()
+
+    _onReachableChange: (nowReachable) =>
+      super(nowReachable)
+      @_toggleColorPickerDisable()
 
   class HueZLLExtendedColorItem extends HueZLLColorItem
     constructor: (templData, @device) ->
@@ -228,7 +252,11 @@ $(document).on 'templateinit', (event) ->
 
     _onStateChange: (newState) =>
       super(newState)
-      @sliderCtEle.slider(if newState then 'enable' else 'disable')
+      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
+
+    _onReachableChange: (nowReachable) =>
+      super(nowReachable)
+      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   extend HueZLLExtendedColorItem.prototype, ColorTempMixin
 
