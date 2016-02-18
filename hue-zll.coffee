@@ -79,6 +79,7 @@ module.exports = (env) ->
 
     constructor: (@device, @hueApi, @hueId) ->
       @lightState = hueapi.lightState.create()
+      @lightStateResult = {}
 
     poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived, @_apiError)
 
@@ -93,15 +94,12 @@ module.exports = (env) ->
 
     _stateReceived: (result) =>
       newLightState = hueapi.lightState.create(result.state)
-      try
-        diff = @_diffState(newLightState)
-        if Object.keys(diff).length > 0
-          env.logger.debug("light #{@hueId} state change: " + JSON.stringify(diff))
-      catch error
-        env.logger.warn(error)
-      finally
-        @lightState = newLightState
-        return result.state
+      diff = @_diffState(newLightState)
+      if Object.keys(diff).length > 0
+        env.logger.debug("light #{@hueId} state change: " + JSON.stringify(diff))
+      @lightState = newLightState
+      @lightStateResult = result
+      return result.state
 
     _mergeLightState: (stateChange) ->
       @lightState._values[k] = v for k, v of stateChange._values
@@ -124,15 +122,12 @@ module.exports = (env) ->
 
     _stateReceived: (result) =>
       newGroupState = hueapi.lightState.create(result.lastAction)
-      try
-        diff = @_diffState(newGroupState)
-        if Object.keys(diff).length > 0
-          env.logger.debug("group #{@hueId} state change: " + JSON.stringify(diff))
-      catch error
-        env.logger.warn(error)
-      finally
-        @lightState = newGroupState
-        return result.lastAction
+      diff = @_diffState(newGroupState)
+      if Object.keys(diff).length > 0
+        env.logger.debug("group #{@hueId} state change: " + JSON.stringify(diff))
+      @lightState = newGroupState
+      @lightStateResult = result
+      return result.lastAction
 
     setLightState: (hueState) ->
       env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState._values))
@@ -141,6 +136,8 @@ module.exports = (env) ->
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
+
+    _reachable: null
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
@@ -153,17 +150,29 @@ module.exports = (env) ->
       setInterval(( => @poll() ), @_pluginConfig.polling)
 
     extendAttributesActions: () =>
+      @attributes = extend (extend {}, @attributes),
+        reachable:
+          description: "Light is reachable?"
+          type: t.boolean
 
     # Wait on first poll on initialization
     getState: -> @lightStateInitialized.then(super)
+    getReachable: -> Promise.join @lightStateInitialized, ( => @_reachable )
 
     poll: -> @hue.poll().then(@_lightStateReceived)
 
-    _lightStateReceived: (rstate) => @_setState rstate.on
+    _lightStateReceived: (rstate) =>
+      @_setState rstate.on
+      @_setReachable rstate.reachable
 
     changeStateTo: (state) ->
       hueState = @hue.createLightState().on(state)
       return @hue.setLightState(hueState).then( ( => @_setState state) )
+
+    _setReachable: (reachable) ->
+      unless @_reachable is reachable
+        @_reachable = reachable
+        @emit "reachable", reachable
 
   class HueZLLOnOffLightGroup extends HueZLLOnOffLight
     HueClass: BaseHueLightGroup
