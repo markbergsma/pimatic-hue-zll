@@ -33,8 +33,8 @@ module.exports = (env) ->
         env.logger.info("Connected to bridge #{version['name']}, " +
           "API version #{version['version']['api']}, software #{version['version']['software']}")
       ), @_hueApiRequestFailed)
-      @hueApi.lights().then(env.logger.debug, @_hueApiRequestFailed)
-      @hueApi.groups().then(env.logger.debug, @_hueApiRequestFailed)
+      @hueApi.lights().then(( (result) => env.logger.debug result), @_hueApiRequestFailed)
+      @hueApi.groups().then(( (result) => env.logger.debug result), @_hueApiRequestFailed)
 
       deviceConfigDef = require("./device-config-schema")
 
