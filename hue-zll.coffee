@@ -309,9 +309,11 @@ module.exports = (env) ->
         hue:
           description: "the color hue value"
           type: t.number
+          unit: "%"
         sat:
           description: "the color saturation value"
           type: t.number
+          unit: "%"
         colormode:
           description: "the mode of color last set"
           type: t.string
@@ -337,26 +339,26 @@ module.exports = (env) ->
 
     _lightStateReceived: (rstate) =>
       super(rstate)
-      @_setHue rstate.hue
-      @_setSat rstate.sat
+      @_setHue (rstate.hue / 65535 * 100)
+      @_setSat (rstate.sat / 254 * 100)
       @_setColormode rstate.colormode if rstate.colormode?
 
     changeHueTo: (hue) ->
-      hueState = @hue.createLightState().on(true).hue(hue)
+      hueState = @hue.createLightState().on(true).hue(hue / 100 * 65535)
       return @hue.setLightState(hueState).then( ( =>
         @_setState true
         @_setHue hue
       ) )
 
     changeSatTo: (sat) ->
-      hueState = @hue.createLightState().on(true).sat(sat)
+      hueState = @hue.createLightState().on(true).sat(sat / 100 * 254)
       return @hue.setLightState(hueState).then( ( =>
         @_setState true
         @_setSat sat
       ) )
 
     changeHueSatTo: (hue, sat) ->
-      hueState = @hue.createLightState().on(true).hue(hue).sat(sat)
+      hueState = @hue.createLightState().on(true).hue(hue / 100 * 65535).sat(sat / 100 * 254)
       return @hue.setLightState(hueState).then( ( =>
         @_setState true
         @_setHue hue
@@ -366,7 +368,7 @@ module.exports = (env) ->
     _setHue: (hueVal) ->
       hueVal = parseFloat(hueVal)
       assert not isNaN(hueVal)
-      assert 0 <= hueVal <= 65535
+      assert 0 <= hueVal <= 100
       unless @_hue is hueVal
         @_hue = hueVal
         @emit "hue", hueVal
@@ -374,7 +376,7 @@ module.exports = (env) ->
     _setSat: (satVal) ->
       satVal = parseFloat(satVal)
       assert not isNaN(satVal)
-      assert 0 <= satVal <= 254
+      assert 0 <= satVal <= 100
       unless @_sat is satVal
         @_sat = satVal
         @emit "sat", satVal

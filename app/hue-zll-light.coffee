@@ -223,8 +223,8 @@ $(document).on 'templateinit', (event) ->
       if @getAttribute('colormode').value() == 'ct'
         return { h: 255, s: 0, v: 1, a: 0.5 }
       else
-        hue = @getAttribute('hue').value() / 65535 * 360
-        sat = @getAttribute('sat').value() / 254
+        hue = @getAttribute('hue').value() / 100 * 360
+        sat = @getAttribute('sat').value() / 100
         # We don't want to set the brightness (dimlevel) from the color picker,
         # and it wouldn't really match anyway. Lock at 75%
         bri = .75
@@ -234,8 +234,8 @@ $(document).on 'templateinit', (event) ->
       @colorPicker.spectrum("set", @colorFromHueSat())
 
     _changeColor: (color) ->
-      hueVal = parseInt(color.toHsv()['h'] / 360 * 65535)
-      satVal = parseInt(color.toHsv()['s'] * 254)
+      hueVal = color.toHsv()['h'] / 360 * 100
+      satVal = color.toHsv()['s'] * 100
 
       @device.rest.changeHueSatTo( {hue: hueVal, sat: satVal}, global: no
         ).done(ajaxShowToast).fail(ajaxAlertFail)
