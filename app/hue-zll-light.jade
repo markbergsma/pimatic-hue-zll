@@ -83,6 +83,6 @@ script#huezllextendedcolor-template(type='text/template')
       | 
       span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezlllight-attribute-template(type='text/template')
-  <!-- ko if: $data.name !== 'state' && $data.name !== 'dimlevel' && $data.name !== 'reachable' && $data.name !== 'ct' && $data.name !== 'hue' && $data.name !== 'sat' -->
+  <!-- ko if: $data.name !== 'state' && $data.name !== 'dimlevel' && $data.name !== 'reachable' && $data.name !== 'ct' && $data.name !== 'hue' && $data.name !== 'sat' && $data.name !== 'colormode' -->
   <!-- ko template: {name: 'attribute-template', data: $data} --><!-- /ko -->
   <!-- /ko -->

@@ -181,6 +181,7 @@ $(document).on 'templateinit', (event) ->
       super(templData, @device)
       hueAttribute = @getAttribute('hue')
       satAttribute = @getAttribute('sat')
+      cmAttribute = @getAttribute('colormode')
       if not hueAttribute? or not satAttribute?
         throw new Error("A color device needs hue/sat attributes!")
 
@@ -194,6 +195,7 @@ $(document).on 'templateinit', (event) ->
         @satValue(newSat)
         pimatic.try => @_updateColorPicker()
       )
+      cmAttribute.value.subscribe(@_updateColorPicker)
 
     afterRender: (elements) ->
       super(elements)
@@ -218,12 +220,15 @@ $(document).on 'templateinit', (event) ->
       @_toggleColorPickerDisable(@getAttribute('state').value())
 
     colorFromHueSat: ->
-      hue = @getAttribute('hue').value() / 65535 * 360
-      sat = @getAttribute('sat').value() / 254
-      # We don't want to set the brightness (dimlevel) from the color picker,
-      # and it wouldn't really match anyway. Lock at 75%
-      bri = .75
-      return { h: hue, s: sat, v: bri }
+      if @getAttribute('colormode').value() == 'ct'
+        return { h: 255, s: 0, v: 1, a: 0.5 }
+      else
+        hue = @getAttribute('hue').value() / 65535 * 360
+        sat = @getAttribute('sat').value() / 254
+        # We don't want to set the brightness (dimlevel) from the color picker,
+        # and it wouldn't really match anyway. Lock at 75%
+        bri = .75
+        return { h: hue, s: sat, v: bri }
 
     _updateColorPicker: =>
       @colorPicker.spectrum("set", @colorFromHueSat())
