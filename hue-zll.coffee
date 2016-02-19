@@ -247,6 +247,16 @@ module.exports = (env) ->
 
     getCt: -> Promise.join @lightStateInitialized, ( => @_ct )
 
+  ColormodeMixin =
+    _colormode: null
+
+    _setColormode: (colormode) ->
+      unless @_colormode is colormode
+        @_colormode = colormode
+        @emit "colormode", colormode
+
+    getColormode: -> Promise.join @lightStateInitialized, ( => @_colormode )
+
   class HueZLLColorTempLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
 
@@ -259,6 +269,9 @@ module.exports = (env) ->
         ct:
           description: "the color temperature"
           type: t.number
+        colormode:
+          description: "the mode of color last set"
+          type: t.string
 
       @actions = extend (extend {}, @actions),
         changeCtTo:
@@ -270,13 +283,16 @@ module.exports = (env) ->
     _lightStateReceived: (rstate) =>
       super(rstate)
       @_setCt rstate.ct
+      @_setColormode rstate.colormode if rstate.colormode?
 
   extend HueZLLColorTempLight.prototype, ColorTempMixin
+  extend HueZLLColorTempLight.prototype, ColormodeMixin
 
   class HueZLLColorTempLightGroup extends HueZLLColorTempLight
     HueClass: BaseHueLightGroup
 
   extend HueZLLColorTempLightGroup.prototype, ColorTempMixin
+  extend HueZLLColorTempLightGroup.prototype, ColormodeMixin
 
   class HueZLLColorLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
@@ -296,6 +312,9 @@ module.exports = (env) ->
         sat:
           description: "the color saturation value"
           type: t.number
+        colormode:
+          description: "the mode of color last set"
+          type: t.string
 
       @actions = extend (extend {}, @actions),
         changeHueTo:
@@ -320,6 +339,7 @@ module.exports = (env) ->
       super(rstate)
       @_setHue rstate.hue
       @_setSat rstate.sat
+      @_setColormode rstate.colormode if rstate.colormode?
 
     changeHueTo: (hue) ->
       hueState = @hue.createLightState().on(true).hue(hue)
@@ -362,8 +382,12 @@ module.exports = (env) ->
     getHue: -> Promise.join @lightStateInitialized, ( => @_hue )
     getSat: -> Promise.join @lightStateInitialized, ( => @_sat )
 
+  extend HueZLLColorLight.prototype, ColormodeMixin
+
   class HueZLLColorLightGroup extends HueZLLColorLight
     HueClass: BaseHueLightGroup
+
+  extend HueZLLColorLightGroup.prototype, ColormodeMixin
 
   class HueZLLExtendedColorLight extends HueZLLColorLight
     HueClass: BaseHueLight
@@ -390,10 +414,12 @@ module.exports = (env) ->
       @_setCt rstate.ct
 
   extend HueZLLExtendedColorLight.prototype, ColorTempMixin
+  extend HueZLLExtendedColorLight.prototype, ColormodeMixin
 
   class HueZLLExtendedColorLightGroup extends HueZLLExtendedColorLight
     HueClass: BaseHueLightGroup
   
   extend HueZLLExtendedColorLightGroup.prototype, ColorTempMixin
+  extend HueZLLExtendedColorLightGroup.prototype, ColormodeMixin
 
   return new HueZLLPlugin()
