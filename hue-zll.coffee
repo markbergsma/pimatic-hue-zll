@@ -139,6 +139,8 @@ module.exports = (env) ->
 
     _reachable: null
 
+    template: "huezllonoff"
+
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
       @name = @config.name

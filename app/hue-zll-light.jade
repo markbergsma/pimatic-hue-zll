@@ -1,3 +1,14 @@
+script#huezllonoff-template(type='text/template')
+  li.sortable.huezlllight-device.no-header
+    div.item-inner
+      label.device-label(data-bind="text: name, tooltip: $data.labelTooltipHtml")
+      | 
+      div.ui-dimlevel
+        select.switch(data-bind="attr: { id: switchId }, value: switchState")
+          option(value="off")=__('Off')
+          option(value="on")=__('On')
+      | 
+      span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
 script#huezlldimmable-template(type='text/template')
   li.sortable.huezlllight-device.no-header
     div.item-inner

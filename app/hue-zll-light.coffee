@@ -5,38 +5,25 @@ $(document).on 'templateinit', (event) ->
     obj[key] = value for key, value of mixin
     obj
 
-  class HueZLLDimmableItem extends pimatic.DeviceItem
+  class HueZLLOnOffItem extends pimatic.DeviceItem
     constructor: (templData, @device) ->
       super(templData, @device)
       @switchId = "switch-#{templData.deviceId}"
-      @sliderBriId = "bri-#{templData.deviceId}"
       stateAttribute = @getAttribute('state')
-      dimAttribute = @getAttribute('dimlevel')
       reachableAttribute = @getAttribute('reachable')
       unless stateAttribute?
         throw new Error("A switch device needs a state attribute!")
-      unless dimAttribute?
-        throw new Error("A dimmer device needs a dimlevel attribute!")
       unless reachableAttribute?
         throw new Error("A Hue light needs a reachable attribute!")
 
       @switchState = ko.observable(if stateAttribute.value() then 'on' else 'off')
-      @sliderBriValue = ko.observable(if dimAttribute.value()? then dimAttribute.value() else 0)
       stateAttribute.value.subscribe(@_onStateChange)
-      dimAttribute.value.subscribe( (newDimlevel) =>
-        @sliderBriValue(newDimlevel)
-        pimatic.try => @sliderBriEle.slider('refresh')
-      )
-      # FIXME: OnOff lights need this as well
       reachableAttribute.value.subscribe(@_onReachableChange)
 
     afterRender: (elements) ->
       super(elements)
       @switchEle = $(elements).find('select')
       @switchEle.flipswitch(disabled: @getAttribute('reachable').value() is false)
-      @sliderBriEle = $(elements).find('#' + @sliderBriId)
-      @sliderBriEle.slider(disabled: @_disableInputs())
-
       state = @getAttribute('state')
       if state.labels?
         capitaliseFirstLetter = (s) -> s.charAt(0).toUpperCase() + s.slice(1)
@@ -45,7 +32,6 @@ $(document).on 'templateinit', (event) ->
       $(elements).find('.ui-flipswitch')
         .addClass('no-carousel-slide')
         .toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
-      $(elements).find('.ui-slider').addClass('no-carousel-slide')
 
     onSwitchChange: ->
       if @_restoringState then return
@@ -85,6 +71,39 @@ $(document).on 'templateinit', (event) ->
         pimatic.try => @switchEle.flipswitch('refresh')
         @_restoringState = false
 
+    _disableInputs: =>
+      (@getAttribute('reachable').value() is false) or (@getAttribute('state').value() is off)
+
+    _onStateChange: (newState) =>
+      @_restoringState = true
+      @switchState(if newState then 'on' else 'off')
+      pimatic.try => @switchEle.flipswitch('refresh')
+      @_restoringState = false
+
+    _onReachableChange: (nowReachable) =>
+      @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
+      @switchEle.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
+
+  class HueZLLDimmableItem extends HueZLLOnOffItem
+    constructor: (templData, @device) ->
+      super(templData, @device)
+      @sliderBriId = "bri-#{templData.deviceId}"
+      dimAttribute = @getAttribute('dimlevel')
+      unless dimAttribute?
+        throw new Error("A dimmer device needs a dimlevel attribute!")
+
+      @sliderBriValue = ko.observable(if dimAttribute.value()? then dimAttribute.value() else 0)
+      dimAttribute.value.subscribe( (newDimlevel) =>
+        @sliderBriValue(newDimlevel)
+        pimatic.try => @sliderBriEle.slider('refresh')
+      )
+
+    afterRender: (elements) ->
+      super(elements)
+      @sliderBriEle = $(elements).find('#' + @sliderBriId)
+      @sliderBriEle.slider(disabled: @_disableInputs())
+      $(elements).find('.ui-slider').addClass('no-carousel-slide')
+
     onSliderStop: ->
       unless parseInt(@sliderBriValue()) == parseInt(@getAttribute('dimlevel').value())
         @sliderBriEle.slider('disable')
@@ -97,19 +116,12 @@ $(document).on 'templateinit', (event) ->
           pimatic.try => @sliderBriEle.slider('enable')
         ).fail(ajaxAlertFail)
 
-    _disableInputs: =>
-      (@getAttribute('reachable').value() is false) or (@getAttribute('state').value() is off)
-
     _onStateChange: (newState) =>
-       @_restoringState = true
-       @switchState(if newState then 'on' else 'off')
-       pimatic.try => @switchEle.flipswitch('refresh')
-       @_restoringState = false
-       @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      super(newState)
+      @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
     _onReachableChange: (nowReachable) =>
-      @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
-      @switchEle.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
+      super(nowReachable)
       @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   ColorTempMixin =
@@ -261,6 +273,7 @@ $(document).on 'templateinit', (event) ->
   extend HueZLLExtendedColorItem.prototype, ColorTempMixin
 
   # register the item-classes
+  pimatic.templateClasses['huezllonoff'] = HueZLLOnOffItem
   pimatic.templateClasses['huezlldimmable'] = HueZLLDimmableItem
   pimatic.templateClasses['huezllcolortemp'] = HueZLLColorTempItem
   pimatic.templateClasses['huezllcolor'] = HueZLLColorItem
