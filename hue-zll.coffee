@@ -105,7 +105,11 @@ module.exports = (env) ->
       @lightState._values[k] = v for k, v of stateChange._values
       @lightState
 
-    createLightState: -> hueapi.lightState.create()
+    createLightState: ->
+      ls = hueapi.lightState.create()
+      ls.transition(@device.config.transitionTime) if @device.config.transitionTime?
+      return ls
+
     getLightState: -> @lightState
 
     setLightState: (hueState) ->
