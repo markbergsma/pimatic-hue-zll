@@ -124,7 +124,7 @@ module.exports = (env) ->
 
     _apiError: (error) ->
       env.logger.error("Hue API request failed:", error.message)
-      return error
+      throw error
 
   class BaseHueLightGroup extends BaseHueLight
 
@@ -174,7 +174,7 @@ module.exports = (env) ->
     getState: -> @lightStateInitialized.then(super)
     getReachable: -> Promise.join @lightStateInitialized, ( => @_reachable )
 
-    poll: -> @hue.poll().then(@_lightStateReceived)
+    poll: -> @hue.poll().then(@_lightStateReceived, ( -> ))
 
     _lightStateReceived: (rstate) =>
       @_setState rstate.on
