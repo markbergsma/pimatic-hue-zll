@@ -171,7 +171,7 @@ module.exports = (env) ->
           type: t.boolean
 
     # Wait on first poll on initialization
-    getState: -> @lightStateInitialized.then(super)
+    getState: -> Promise.join @lightStateInitialized, ( => @_state )
     getReachable: -> Promise.join @lightStateInitialized, ( => @_reachable )
 
     poll: -> @hue.poll().then(@_lightStateReceived, ( -> ))
