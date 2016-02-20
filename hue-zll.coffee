@@ -99,6 +99,8 @@ module.exports = (env) ->
         env.logger.debug("light #{@hueId} state change: " + JSON.stringify(diff))
       @lightState = newLightState
       @lightStateResult = result
+      @name = result.name if result.name?
+      @type = result.type if result.type?
       return result.state
 
     _mergeLightState: (stateChange) ->
@@ -131,6 +133,8 @@ module.exports = (env) ->
         env.logger.debug("group #{@hueId} state change: " + JSON.stringify(diff))
       @lightState = newGroupState
       @lightStateResult = result
+      @name = result.name if result.name?
+      @type = result.type if result.type?
       return result.lastAction
 
     setLightState: (hueState) ->
@@ -147,13 +151,14 @@ module.exports = (env) ->
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
       @id = @config.id
-      @name = @config.name
+      @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
       @extendAttributesActions()
       super()
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
       setInterval(( => @poll() ), @_pluginConfig.polling)
+      @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
 
     extendAttributesActions: () =>
       @attributes = extend (extend {}, @attributes),
@@ -170,6 +175,13 @@ module.exports = (env) ->
     _lightStateReceived: (rstate) =>
       @_setState rstate.on
       @_setReachable rstate.reachable
+      return rstate
+
+    _replaceName: =>
+      if @hue.name? and @hue.name.length isnt 0
+        env.logger.info("Changing name of #{@constructor.name} device #{@id} " +
+          "from \"#{@name}\" to \"#{@hue.name}\"")
+        @updateName @hue.name
 
     changeStateTo: (state) ->
       hueState = @hue.createLightState().on(state)
@@ -212,6 +224,7 @@ module.exports = (env) ->
     _lightStateReceived: (rstate) =>
       super(rstate)
       @_setDimlevel rstate.bri / 254 * 100
+      return rstate
 
     changeDimlevelTo: (state) ->
       hueState = @hue.createLightState().on(true).bri(state / 100 * 254)
@@ -288,6 +301,7 @@ module.exports = (env) ->
       super(rstate)
       @_setCt rstate.ct
       @_setColormode rstate.colormode if rstate.colormode?
+      return rstate
 
   extend HueZLLColorTempLight.prototype, ColorTempMixin
   extend HueZLLColorTempLight.prototype, ColormodeMixin
@@ -346,6 +360,7 @@ module.exports = (env) ->
       @_setHue (rstate.hue / 65535 * 100)
       @_setSat (rstate.sat / 254 * 100)
       @_setColormode rstate.colormode if rstate.colormode?
+      return rstate
 
     changeHueTo: (hue) ->
       hueState = @hue.createLightState().on(true).hue(hue / 100 * 65535)
@@ -418,6 +433,7 @@ module.exports = (env) ->
     _lightStateReceived: (rstate) =>
       super(rstate)
       @_setCt rstate.ct
+      return rstate
 
   extend HueZLLExtendedColorLight.prototype, ColorTempMixin
   extend HueZLLExtendedColorLight.prototype, ColormodeMixin
