@@ -54,6 +54,7 @@ module.exports = (env) ->
         do (DeviceClass) =>
           @framework.deviceManager.registerDeviceClass(DeviceClass.name, {
             configDef: deviceConfigDef[DeviceClass.name],
+            prepareConfig: @prepareConfig,
             createCallback: (deviceConfig) => new DeviceClass(deviceConfig, @hueApi, @config)
           })
 
@@ -74,6 +75,9 @@ module.exports = (env) ->
     _hueApiRequestFailed: (error) ->
       env.logger.error("Hue API request failed!", error.message)
       return error
+
+    prepareConfig: (deviceConfig) ->
+      deviceConfig.name = "" unless deviceConfig.name?
 
   class BaseHueLight
 
