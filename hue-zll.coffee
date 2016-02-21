@@ -58,6 +58,9 @@ module.exports = (env) ->
             createCallback: (deviceConfig) => new DeviceClass(deviceConfig, @hueApi, @config)
           })
 
+      actions = require("./actions") env
+      @framework.ruleManager.addActionProvider(new actions.CtActionProvider(@framework))
+
       @framework.on "after init", =>
         # Check if the mobile-frontent was loaded and get a instance
         mobileFrontend = @framework.pluginManager.getPlugin 'mobile-frontend'
