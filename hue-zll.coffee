@@ -60,6 +60,7 @@ module.exports = (env) ->
 
       actions = require("./actions") env
       @framework.ruleManager.addActionProvider(new actions.CtActionProvider(@framework))
+      @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
 
       @framework.on "after init", =>
         # Check if the mobile-frontent was loaded and get a instance
