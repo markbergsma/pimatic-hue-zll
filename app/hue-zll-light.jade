@@ -57,7 +57,7 @@ script#huezllcolor-template(type='text/template')
           data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
       | 
       div.ui-color
-        div.ui-colorpicker
+        div.ui-colorpicker(class="ui-flipswitch ui-corner-all")
           input.light-color()
       | 
       span.attributes(data-bind="template: { name: 'huezlllight-attribute-template', foreach: $data.device.attributes, afterRender: $data.afterAttributeRender }")
@@ -75,7 +75,7 @@ script#huezllextendedcolor-template(type='text/template')
           data-bind="attr: { id: sliderBriId }, value: sliderBriValue")
       | 
       div.ui-color
-        div.ui-colorpicker
+        div.ui-colorpicker(class="ui-flipswitch ui-corner-all")
           input.light-color()
         | 
         input.dimmer(min="153", max="500", step="1", data-highlight="true",

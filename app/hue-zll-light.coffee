@@ -217,6 +217,7 @@ $(document).on 'templateinit', (event) ->
           @_updateColorPicker()
           @_changeColor(color)
       )
+      $('.sp-container').addClass('ui-corner-all ui-shadow')
       @_toggleColorPickerDisable(@getAttribute('state').value())
 
     colorFromHueSat: ->
