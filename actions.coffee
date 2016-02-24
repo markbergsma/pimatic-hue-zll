@@ -71,6 +71,14 @@ module.exports = (env) ->
 
     hasRestoreAction: -> yes
 
+    executeRestoreAction: (simulate) =>
+      if simulate
+        return Promise.resolve "would restore color temperature to #{value} mired"
+      else
+        return @lastCt.then( (value) =>
+          @device.changeCtTo(value)
+          return "restored color temperature to #{value} mired"
+        )
 
   class HueSatActionProvider extends env.actions.ActionProvider
     constructor: (@framework) ->
@@ -82,8 +90,6 @@ module.exports = (env) ->
 
       hueValueTokens = null
       satValueTokens = null
-      hueExprTokens = null
-      satExprTokens = null
       device = null
 
       hueMatcher = (next) =>
@@ -119,7 +125,7 @@ module.exports = (env) ->
           )
         ])
 
-      if not (match? and ((hueValueTokens? or hueExprTokens?) or (satValueTokens? and satExprTokens?)))
+      if not (match? and (hueValueTokens? or satValueTokens?))
         return null
 
       if hueValueTokens?.length is 1 and not isNaN(hueValueTokens[0])
