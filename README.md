@@ -14,6 +14,8 @@ The Hue system supports 5 light types, which have counterparts in the ZLL specif
 
 The hue-zll plugin supports all these light types with their appropriate attributes and UI elements. Hue light groups are also supported, i.e. sets of lights that can be controlled together.
 
+![Screenshot of Hue-ZLL plugin devices](http://clove.wikked.net/img/huezll.png)
+
 On/off lights have the standard on/off control integraded in Pimatic. Dimmable lights add a brightness/dimlevel slider to it while the on/off control is also retained.
 
 For lights supporting white color temperature setting another slider is provided to select a white tone from cold to warm (in mired). Colors can be controlled as Hue & Saturation values, using a color picker.
