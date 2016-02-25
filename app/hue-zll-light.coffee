@@ -106,7 +106,7 @@ $(document).on 'templateinit', (event) ->
 
     onSliderStop: ->
       unless parseInt(@sliderBriValue()) == parseInt(@getAttribute('dimlevel').value())
-        @sliderBriEle.slider('disable')
+        pimatic.try => @sliderBriEle.slider('disable')
         pimatic.loading(
           "dimming-#{@sliderBriId}", "show", text: __("dimming to %s%", @sliderBriValue())
         )
@@ -118,11 +118,11 @@ $(document).on 'templateinit', (event) ->
 
     _onStateChange: (newState) =>
       super(newState)
-      @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      pimatic.try => @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
     _onReachableChange: (nowReachable) =>
       super(nowReachable)
-      @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      pimatic.try => @sliderBriEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   ColorTempMixin =
     _constructCtSlider: (templData) ->
@@ -143,7 +143,7 @@ $(document).on 'templateinit', (event) ->
 
     _ctSliderStopped: ->
       unless parseInt(@sliderCtValue()) == parseInt(@getAttribute('ct').value())
-        @sliderCtEle.slider('disable')
+        pimatic.try => @sliderCtEle.slider('disable')
         pimatic.loading(
           "colortemp-#{@sliderCtId}", "show", text: __("changing color temp to %s", @sliderCtValue())
         )
@@ -168,11 +168,11 @@ $(document).on 'templateinit', (event) ->
 
     _onStateChange: (newState) =>
       super(newState)
-      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      pimatic.try => @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
     _onReachableChange: (nowReachable) =>
       super(nowReachable)
-      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      pimatic.try => @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   extend HueZLLColorTempItem.prototype, ColorTempMixin
 
@@ -270,11 +270,11 @@ $(document).on 'templateinit', (event) ->
 
     _onStateChange: (newState) =>
       super(newState)
-      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      pimatic.try => @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
     _onReachableChange: (nowReachable) =>
       super(nowReachable)
-      @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
+      pimatic.try => @sliderCtEle.slider(if @_disableInputs() then 'disable' else 'enable')
 
   extend HueZLLExtendedColorItem.prototype, ColorTempMixin
 
