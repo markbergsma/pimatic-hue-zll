@@ -179,6 +179,7 @@ $(document).on 'templateinit', (event) ->
   class HueZLLColorItem extends HueZLLDimmableItem
     constructor: (templData, @device) ->
       super(templData, @device)
+      @_pendingStateChange = null
       hueAttribute = @getAttribute('hue')
       satAttribute = @getAttribute('sat')
       cmAttribute = @getAttribute('colormode')
@@ -215,7 +216,8 @@ $(document).on 'templateinit', (event) ->
         disabled: @_disableInputs()
         move: (color) =>
           @_updateColorPicker()
-          @_changeColor(color)
+          unless @_pendingStateChange?.state() == "pending"
+            @_pendingStateChange = @_changeColor(color)
       )
       $('.sp-container').addClass('ui-corner-all ui-shadow')
       @_toggleColorPickerDisable(@getAttribute('state').value())
@@ -238,7 +240,7 @@ $(document).on 'templateinit', (event) ->
       hueVal = color.toHsv()['h'] / 360 * 100
       satVal = color.toHsv()['s'] * 100
 
-      @device.rest.changeHueSatTo( {hue: hueVal, sat: satVal}, global: no
+      return @device.rest.changeHueSatTo( {hue: hueVal, sat: satVal}, global: no
         ).done(ajaxShowToast).fail(ajaxAlertFail)
 
     _toggleColorPickerDisable: =>
