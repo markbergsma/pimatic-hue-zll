@@ -97,3 +97,18 @@ ul.items .huezlllight-device .ui-color {
   min-height: 30px;
   margin-top: 8px;
 }
+
+/* Mobile adjustments */
+@media only screen and (max-width:380px){ 
+    ul.items .huezlllight-device .ui-slider {
+      float: right;
+      margin: 1px 4px -1px -15px;
+      width: 13em;
+    }   
+}
+
+@media only screen and (max-width:320px){    
+    ul.items .huezlllight-device .ui-slider {
+        width: 12em;
+    }    
+}
