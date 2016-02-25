@@ -371,8 +371,9 @@ module.exports = (env) ->
   ColorTempMixin =
     _ct: null    
 
-    changeCtTo: (ct) ->
+    changeCtTo: (ct, transitionTime=null) ->
       hueStateChange = @hue.prepareStateChange().on(true).ct(ct)
+      hueStateChange.transition(transitionTime) if transitionTime?
       return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setCt ct
@@ -493,22 +494,25 @@ module.exports = (env) ->
       @_setColormode rstate.colormode if rstate.colormode?
       return rstate
 
-    changeHueTo: (hue) ->
+    changeHueTo: (hue, transitionTime=null) ->
       hueStateChange = @hue.prepareStateChange().on(true).hue(hue / 100 * 65535)
+      hueStateChange.transition(transitionTime) if transitionTime?
       return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setHue hue
       ) )
 
-    changeSatTo: (sat) ->
+    changeSatTo: (sat, transitionTime=null) ->
       hueStateChange = @hue.prepareStateChange().on(true).sat(sat / 100 * 254)
+      hueStateChange.transition(transitionTime) if transitionTime?
       return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setSat sat
       ) )
 
-    changeHueSatTo: (hue, sat) ->
+    changeHueSatTo: (hue, sat, transitionTime=null) ->
       hueStateChange = @hue.prepareStateChange().on(true).hue(hue / 100 * 65535).sat(sat / 100 * 254)
+      hueStateChange.transition(transitionTime) if transitionTime?
       return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setHue hue
