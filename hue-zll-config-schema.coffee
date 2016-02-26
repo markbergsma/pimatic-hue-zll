@@ -21,4 +21,8 @@ module.exports = {
       description: "Default polling interval (ms)"
       type: "integer"
       default: 5000
+    hueApiConcurrency:
+      description: "Maximum concurrent requests to the Hue API"
+      type: "integer"
+      default: 2
 }

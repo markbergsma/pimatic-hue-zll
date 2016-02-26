@@ -42,12 +42,13 @@ A minimal Pimatic `config.json` configuration of the hue-zll plugin needs the ho
   ]
 ```
 
-Optionally, you can specify a different TCP port number, a timeout for Hue API commands, and a different polling interval (from the default 5s) for retrieving the latest Hue device status from the bridge:
+Optionally, you can specify a different TCP port number, a timeout for Hue API commands (default: 500ms), a maximum amount of concurrent Hue API requests (default: 2) and a different polling interval (from the default 5s) for retrieving the latest Hue device status from the bridge:
 
 ```json
       "port": 8080,
       "polling": 10000,
       "timeout": 2000,
+      "hueApiConcurrency": 2
 ```
 
 ### Device configuration

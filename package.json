@@ -23,6 +23,7 @@
   "dependencies": {
     "es6-promise": "^3.0.2",
     "node-hue-api": "^2.0.1",
+    "simple-promise-queue": "^0.1.6",
     "spectrum-colorpicker": "^1.8.0"
   },
   "peerDependencies": {

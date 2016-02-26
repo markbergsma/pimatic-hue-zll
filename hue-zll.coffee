@@ -14,10 +14,23 @@ module.exports = (env) ->
   es6Promise = require 'es6-promise'
   hueapi = require 'node-hue-api'
 
+  Queue = require 'simple-promise-queue'
+
   # helper function to mix in key/value pairs from another object
   extend = (obj, mixin) ->
     obj[key] = value for key, value of mixin
     obj
+
+  class HueQueue extends Queue
+    constructor: (options) ->
+      super(options)
+      @maxLength = options.maxLength or Infinity
+
+    pushTask: (promiseFunction) ->
+      if @length < @maxLength
+        return super(promiseFunction)
+      else
+        return Promise.reject Error("Hue API maximum queue length (#{@maxLength}) exceeded")
 
   class HueZLLPlugin extends env.plugins.Plugin
 
@@ -28,6 +41,9 @@ module.exports = (env) ->
         @config.timeout,
         @config.port
       )
+
+      BaseHueLight.hueQ.concurrency = @config.hueApiConcurrency
+      BaseHueLight.hueQ.timeout = @config.timeout
 
       @hueApi.version().then(( (version) =>
         env.logger.info("Connected to bridge #{version['name']}, " +
@@ -84,12 +100,20 @@ module.exports = (env) ->
       deviceConfig.name = "" unless deviceConfig.name?
 
   class BaseHueLight
+    @hueQ: new HueQueue({
+      maxLength: 4  # Incremented for each additional device
+      autoStart: true
+    })
 
     constructor: (@device, @hueApi, @hueId) ->
       @lightState = hueapi.lightState.create()
       @lightStateResult = {}
+      BaseHueLight.hueQ.maxLength++
 
-    poll: -> @hueApi.lightStatus(@hueId).then(@_stateReceived, @_apiError)
+    poll: ->
+      return BaseHueLight.hueQ.pushTask( (resolve, reject) =>
+        return @hueApi.lightStatus(@hueId).then(resolve)
+      ).then(@_stateReceived, @_apiError)
 
     _diffState: (newLightState) ->
       diff = {}
@@ -123,8 +147,10 @@ module.exports = (env) ->
     getLightState: -> @lightState
 
     setLightState: (hueState) ->
-      env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState._values))
-      @hueApi.setLightState(@hueId, hueState).then(( => @_mergeLightState hueState), @_apiError)
+      return BaseHueLight.hueQ.pushTask( (resolve, reject) =>
+        env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState._values))
+        return @hueApi.setLightState(@hueId, hueState).then(resolve)
+      ).then(( => @_mergeLightState hueState), @_apiError)
 
     _apiError: (error) ->
       env.logger.error("Hue API request failed:", error.message)
@@ -132,7 +158,10 @@ module.exports = (env) ->
 
   class BaseHueLightGroup extends BaseHueLight
 
-    poll: -> @hueApi.getGroup(@hueId).then(@_stateReceived, @_apiError)
+    poll: ->
+      return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
+        @hueApi.getGroup(@hueId).then(resolve)
+      ).then(@_stateReceived, @_apiError)
 
     _stateReceived: (result) =>
       newGroupState = hueapi.lightState.create(result.lastAction)
@@ -146,9 +175,10 @@ module.exports = (env) ->
       return result.lastAction
 
     setLightState: (hueState) ->
-      env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState._values))
-      @hueApi.setGroupLightState(@hueId, hueState).then(
-        ( => @_mergeLightState hueState), @_apiError)
+      return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
+        env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState._values))
+        @hueApi.setGroupLightState(@hueId, hueState).then(resolve)
+      ).then(( => @_mergeLightState hueState), @_apiError)
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
