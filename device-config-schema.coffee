@@ -11,6 +11,10 @@ module.exports = {
         description: "Transition time to a new light state (ms)"
         type: "number"
         required: false
+      polling:
+        description: "Polling interval for this device (ms)"
+        type: "number"
+        required: false
   },
   HueZLLOnOffLightGroup: {
     title: "Hue On/Off light group"
@@ -21,6 +25,10 @@ module.exports = {
         type: "number"
       transitionTime:
         description: "Transition time to a new light state (ms)"
+        type: "number"
+        required: false
+      polling:
+        description: "Polling interval for this device (ms)"
         type: "number"
         required: false
   },
@@ -35,6 +43,10 @@ module.exports = {
         description: "Transition time to a new light state (ms)"
         type: "number"
         required: false
+      polling:
+        description: "Polling interval for this device (ms)"
+        type: "number"
+        required: false
   },
   HueZLLDimmableLightGroup: {
     title: "Hue Dimmable light group"
@@ -45,6 +57,10 @@ module.exports = {
         type: "number"
       transitionTime:
         description: "Transition time to a new light state (ms)"
+        type: "number"
+        required: false
+      polling:
+        description: "Polling interval for this device (ms)"
         type: "number"
         required: false
   },
@@ -59,6 +75,10 @@ module.exports = {
         description: "Transition time to a new light state (ms)"
         type: "number"
         required: false
+      polling:
+        description: "Polling interval for this device (ms)"
+        type: "number"
+        required: false
   },
   HueZLLColorTempLightGroup: {
     title: "Hue Color Temperature light group"
@@ -69,6 +89,10 @@ module.exports = {
         type: "number"
       transitionTime:
         description: "Transition time to a new light state (ms)"
+        type: "number"
+        required: false
+      polling:
+        description: "Polling interval for this device (ms)"
         type: "number"
         required: false
   },
@@ -83,6 +107,10 @@ module.exports = {
         description: "Transition time to a new light state (ms)"
         type: "number"
         required: false
+      polling:
+        description: "Polling interval for this device (ms)"
+        type: "number"
+        required: false
   },
   HueZLLColorLightGroup: {
     title: "Hue Color light group"
@@ -93,6 +121,10 @@ module.exports = {
         type: "number"
       transitionTime:
         description: "Transition time to a new light state (ms)"
+        type: "number"
+        required: false
+      polling:
+        description: "Polling interval for this device (ms)"
         type: "number"
         required: false
   },
@@ -107,6 +139,10 @@ module.exports = {
         description: "Transition time to a new light state (ms)"
         type: "number"
         required: false
+      polling:
+        description: "Polling interval for this device (ms)"
+        type: "number"
+        required: false
   },
   HueZLLExtendedColorLightGroup: {
     title: "Hue Extended Color light group"
@@ -117,6 +153,10 @@ module.exports = {
         type: "number"
       transitionTime:
         description: "Transition time to a new light state (ms)"
+        type: "number"
+        required: false
+      polling:
+        description: "Polling interval for this device (ms)"
         type: "number"
         required: false
   },

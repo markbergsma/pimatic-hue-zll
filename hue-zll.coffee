@@ -165,7 +165,7 @@ module.exports = (env) ->
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @lightStateInitialized = @poll()
-      setInterval(( => @poll() ), @_pluginConfig.polling)
+      setInterval(( => @poll() ), @config.polling or @_pluginConfig.polling)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
 
     extendAttributesActions: () =>

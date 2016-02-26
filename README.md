@@ -103,6 +103,8 @@ These need a matching `hueId` as known by the Hue API as well, which for groups 
 
 If you'd like to change the default (400ms) *transition time* for light state changes, you can do so as well per device using the ``transitionTime`` option (in ms).
 
+The *polling interval* can also be changed per device with the ``polling`` device option, such that state changes for important devices are picked up faster, or slower for devices that don't need it - reducing load on the Hue bridge and the system.
+
 ## Variables, actions and rules
 
 All lights support at least the following attributes:
