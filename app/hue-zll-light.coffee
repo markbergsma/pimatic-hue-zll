@@ -39,7 +39,7 @@ $(document).on 'templateinit', (event) ->
       value = @getAttribute('state').value()
       if stateToSet is value
         return
-      @switchEle.flipswitch('disable')
+      pimatic.try => @switchEle.flipswitch('disable')
       deviceAction = (if @switchState() is 'on' then 'turnOn' else 'turnOff')
 
       doIt = (
@@ -81,7 +81,7 @@ $(document).on 'templateinit', (event) ->
       @_restoringState = false
 
     _onReachableChange: (nowReachable) =>
-      @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
+      pimatic.try => @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
       @switchEle.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
 
   class HueZLLDimmableItem extends HueZLLOnOffItem
