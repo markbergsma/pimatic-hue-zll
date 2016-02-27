@@ -180,6 +180,7 @@ $(document).on 'templateinit', (event) ->
     constructor: (templData, @device) ->
       super(templData, @device)
       @_pendingStateChange = null
+      @_colorChanged = false
       hueAttribute = @getAttribute('hue')
       satAttribute = @getAttribute('sat')
       cmAttribute = @getAttribute('colormode')
@@ -190,11 +191,11 @@ $(document).on 'templateinit', (event) ->
       @satValue = ko.observable(if satAttribute.value()? then satAttribute.value() else 0)
       hueAttribute.value.subscribe( (newHue) =>
         @hueValue(newHue)
-        pimatic.try => @_updateColorPicker()
+        @_updateColorPicker()
       )
       satAttribute.value.subscribe( (newSat) =>
         @satValue(newSat)
-        pimatic.try => @_updateColorPicker()
+        @_updateColorPicker()
       )
       cmAttribute.value.subscribe(@_updateColorPicker)
 
@@ -215,14 +216,15 @@ $(document).on 'templateinit', (event) ->
         allowEmpty: false
         disabled: @_disableInputs()
         move: (color) =>
-          @_updateColorPicker()
-          unless @_pendingStateChange?.state() == "pending"
-            @_pendingStateChange = @_changeColor(color)
+          if @_pendingStateChange?.state() == "pending"
+            @_colorChanged = true
+          else
+            @_changeColor(color).always(@_recheckColorPickerChanges)
       )
       $('.sp-container').addClass('ui-corner-all ui-shadow')
       @_toggleColorPickerDisable(@getAttribute('state').value())
 
-    colorFromHueSat: ->
+    colorFromHueSat: =>
       if @getAttribute('colormode').value() == 'ct'
         return { h: 255, s: 0, v: 1, a: 0.5 }
       else
@@ -234,14 +236,22 @@ $(document).on 'templateinit', (event) ->
         return { h: hue, s: sat, v: bri }
 
     _updateColorPicker: =>
-      @colorPicker.spectrum("set", @colorFromHueSat())
+      pimatic.try => @colorPicker.spectrum("set", @colorFromHueSat())
 
     _changeColor: (color) ->
+      @_colorChanged = false
       hueVal = color.toHsv()['h'] / 360 * 100
       satVal = color.toHsv()['s'] * 100
 
-      return @device.rest.changeHueSatTo( {hue: hueVal, sat: satVal}, global: no
-        ).done(ajaxShowToast).fail(ajaxAlertFail)
+      return @_pendingStateChange = @device.rest.changeHueSatTo(
+          {hue: hueVal, sat: satVal}, global: no
+        ).then(ajaxShowToast, ajaxAlertFail)
+
+    _recheckColorPickerChanges: =>
+      if @_colorChanged
+        # If the value changed while an API request was underway, send a new request
+        # with the _current_ value
+        return @_changeColor @colorPicker.spectrum('get')
 
     _toggleColorPickerDisable: =>
       disable = @_disableInputs()
