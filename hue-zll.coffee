@@ -42,8 +42,8 @@ module.exports = (env) ->
         @config.port
       )
 
-      BaseHueLight.hueQ.concurrency = @config.hueApiConcurrency
-      BaseHueLight.hueQ.timeout = @config.timeout
+      BaseHueDevice.hueQ.concurrency = @config.hueApiConcurrency
+      BaseHueDevice.hueQ.timeout = @config.timeout
 
       @hueApi.version().then(( (version) =>
         env.logger.info("Connected to bridge #{version['name']}, " +
@@ -103,19 +103,28 @@ module.exports = (env) ->
     prepareConfig: (deviceConfig) ->
       deviceConfig.name = "" unless deviceConfig.name?
 
-  class BaseHueLight
+  class BaseHueDevice
     @hueQ: new HueQueue({
       maxLength: 4  # Incremented for each additional device
       autoStart: true
     })
 
+    constructor: (@device, @hueApi) ->
+      BaseHueDevice.hueQ.maxLength++
+
+    _apiError: (error) ->
+      env.logger.error("Hue API request failed:", error.message)
+      throw error
+
+  class BaseHueLight extends BaseHueDevice
+
     constructor: (@device, @hueApi, @hueId) ->
+      super(@device, @hueApi)
       @lightState = hueapi.lightState.create()
       @lightStateResult = {}
-      BaseHueLight.hueQ.maxLength++
 
     poll: ->
-      return BaseHueLight.hueQ.pushTask( (resolve, reject) =>
+      return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return @hueApi.lightStatus(@hueId).then(resolve)
       ).then(@_stateReceived, @_apiError)
 
@@ -151,14 +160,10 @@ module.exports = (env) ->
     getLightState: -> @lightState
 
     setLightState: (hueState) ->
-      return BaseHueLight.hueQ.pushTask( (resolve, reject) =>
+      return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState._values))
         return @hueApi.setLightState(@hueId, hueState).then(resolve)
       ).then(( => @_mergeLightState hueState), @_apiError)
-
-    _apiError: (error) ->
-      env.logger.error("Hue API request failed:", error.message)
-      throw error
 
   class BaseHueLightGroup extends BaseHueLight
 
