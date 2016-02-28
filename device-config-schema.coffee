@@ -14,7 +14,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLOnOffLightGroup: {
     title: "Hue On/Off light group"
@@ -30,7 +30,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLDimmableLight: {
     title: "Hue Dimmable light"
@@ -46,7 +46,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLDimmableLightGroup: {
     title: "Hue Dimmable light group"
@@ -62,7 +62,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLColorTempLight: {
     title: "Hue Color Temperature light"
@@ -78,7 +78,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLColorTempLightGroup: {
     title: "Hue Color Temperature light group"
@@ -94,7 +94,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLColorLight: {
     title: "Hue Color light"
@@ -110,7 +110,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLColorLightGroup: {
     title: "Hue Color light group"
@@ -126,7 +126,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLExtendedColorLight: {
     title: "Hue Extended Color light"
@@ -142,7 +142,7 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
   HueZLLExtendedColorLightGroup: {
     title: "Hue Extended Color light group"
@@ -158,6 +158,6 @@ module.exports = {
       polling:
         description: "Polling interval for this device (ms)"
         type: "number"
-        required: false
+        default: -1
   },
 }

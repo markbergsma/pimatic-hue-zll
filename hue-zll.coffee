@@ -118,15 +118,49 @@ module.exports = (env) ->
 
   class BaseHueLight extends BaseHueDevice
 
+    @globalPolling: null
+    @statusCallbacks: {}
+
+    # Static methods for polling all lights
+
+    @pollAllLights: (hueApi) ->
+      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        return hueApi.lights().then(resolve)
+      ).then(BaseHueLight.allLightsReceived)
+
+    @allLightsReceived: (lightsResult) ->
+      for light in lightsResult.lights
+        if Array.isArray(BaseHueLight.statusCallbacks[light.id])
+          cb(light) for cb in BaseHueLight.statusCallbacks[light.id]
+
+    @setupGlobalPolling: (interval, hueApi) ->
+      unless BaseHueLight.globalPolling?
+        BaseHueLight.globalPolling = setInterval(BaseHueLight.pollAllLights, interval, hueApi)
+
+
     constructor: (@device, @hueApi, @hueId) ->
       super(@device, @hueApi)
       @lightState = hueapi.lightState.create()
-      @lightStateResult = {}
+      @lightStatusResult = {}
+      @deviceStateCallback = null
+      @_setupStatusPolling()
+
+    _setupStatusPolling: ->
+      @registerStatusHandler(@_statusReceived)
+
+    registerStatusHandler: (callback, hueId=@hueId) ->
+      if Array.isArray(@constructor.statusCallbacks[hueId])
+        @constructor.statusCallbacks[hueId].push(callback)
+      else
+        @constructor.statusCallbacks[hueId] = Array(callback)
+
+    setupPolling: (interval) =>
+      setInterval(( => @poll()), interval)
 
     poll: ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return @hueApi.lightStatus(@hueId).then(resolve)
-      ).then(@_stateReceived, @_apiError)
+      ).then(@_statusReceived, @_apiError)
 
     _diffState: (newLightState) ->
       diff = {}
@@ -137,15 +171,17 @@ module.exports = (env) ->
           (k != 'xy' and @lightState._values[k] != v))
       return diff
 
-    _stateReceived: (result) =>
+    _statusReceived: (result) =>
       newLightState = hueapi.lightState.create(result.state)
       diff = @_diffState(newLightState)
       if Object.keys(diff).length > 0
         env.logger.debug("light #{@hueId} state change: " + JSON.stringify(diff))
       @lightState = newLightState
-      @lightStateResult = result
+      @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
+
+      @deviceStateCallback?(result.state)
       return result.state
 
     _mergeLightState: (stateChange) ->
@@ -167,21 +203,44 @@ module.exports = (env) ->
 
   class BaseHueLightGroup extends BaseHueLight
 
+    @globalPolling: null
+    @statusCallbacks: {}
+
+    # Static methods for polling all lights
+
+    @pollAllGroups: (hueApi) ->
+      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        return hueApi.groups().then(resolve)
+      ).then(BaseHueLightGroup.allGroupsReceived)
+
+    @allGroupsReceived: (groupsResult) ->
+      for group in groupsResult
+        if Array.isArray(BaseHueLightGroup.statusCallbacks[group.id])
+          cb(group) for cb in BaseHueLightGroup.statusCallbacks[group.id]
+
+    @setupGlobalPolling: (interval, hueApi) ->
+      unless BaseHueLightGroup.globalPolling?
+        BaseHueLightGroup.globalPolling = setInterval(BaseHueLightGroup.pollAllGroups, interval, hueApi)
+
+
     poll: ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
         @hueApi.getGroup(@hueId).then(resolve)
-      ).then(@_stateReceived, @_apiError)
+      ).then(@_statusReceived, @_apiError)
 
-    _stateReceived: (result) =>
-      newGroupState = hueapi.lightState.create(result.lastAction)
+    _statusReceived: (result) =>
+      stateObj = result.lastAction or result.action
+      newGroupState = hueapi.lightState.create(stateObj)
       diff = @_diffState(newGroupState)
       if Object.keys(diff).length > 0
         env.logger.debug("group #{@hueId} state change: " + JSON.stringify(diff))
       @lightState = newGroupState
-      @lightStateResult = result
+      @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
-      return result.lastAction
+
+      @deviceStateCallback?(stateObj)
+      return stateObj
 
     setLightState: (hueState) ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
@@ -203,8 +262,12 @@ module.exports = (env) ->
       super()
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
+      @hue.deviceStateCallback = @_lightStateReceived
+      # Enable global polling (for all lights or groups)
+      @HueClass.setupGlobalPolling(@_pluginConfig.polling, hueApi)
+
+      @hue.setupPolling(@config.polling or @_pluginConfig.polling) unless @config.polling < 0
       @lightStateInitialized = @poll()
-      setInterval(( => @poll() ), @config.polling or @_pluginConfig.polling)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
 
     extendAttributesActions: () =>
@@ -217,7 +280,7 @@ module.exports = (env) ->
     getState: -> Promise.join @lightStateInitialized, ( => @_state )
     getReachable: -> Promise.join @lightStateInitialized, ( => @_reachable )
 
-    poll: -> @hue.poll().then(@_lightStateReceived, ( -> ))
+    poll: -> @hue.poll()
 
     _lightStateReceived: (rstate) =>
       @_setState rstate.on
