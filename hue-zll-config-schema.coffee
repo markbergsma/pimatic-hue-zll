@@ -25,4 +25,8 @@ module.exports = {
       description: "Maximum concurrent requests to the Hue API"
       type: "integer"
       default: 2
+    hueApiQueueMaxLength:
+      description: "Maximum amount of requests queued for the Hue API"
+      type: "integer"
+      default: 0
 }

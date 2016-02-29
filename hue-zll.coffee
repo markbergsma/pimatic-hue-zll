@@ -92,6 +92,10 @@ module.exports = (env) ->
         else
           env.logger.warn "mobile-frontend not loaded, no gui will be available"
 
+        if @config.hueApiQueueMaxLength > 0
+          # Override the default auto calculated maximum queue length
+          BaseHueLight.hueQ.maxLength = @config.hueApiQueueMaxLength
+
     _hueApiRequestFailed: (error) ->
       env.logger.error("Hue API request failed!", error.message)
       return error
