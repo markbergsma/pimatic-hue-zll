@@ -125,7 +125,7 @@ module.exports = (env) ->
 
     @pollAllLights: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.lights().then(resolve)
+        return hueApi.lights().then(resolve, reject)
       ).then(BaseHueLight.allLightsReceived)
 
     @allLightsReceived: (lightsResult) ->
@@ -159,7 +159,7 @@ module.exports = (env) ->
 
     poll: ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return @hueApi.lightStatus(@hueId).then(resolve)
+        return @hueApi.lightStatus(@hueId).then(resolve, reject)
       ).then(@_statusReceived, @_apiError)
 
     _diffState: (newLightState) ->
@@ -198,7 +198,7 @@ module.exports = (env) ->
     setLightState: (hueState) ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState._values))
-        return @hueApi.setLightState(@hueId, hueState).then(resolve)
+        return @hueApi.setLightState(@hueId, hueState).then(resolve, reject)
       ).then(( => @_mergeLightState hueState), @_apiError)
 
   class BaseHueLightGroup extends BaseHueLight
@@ -210,7 +210,7 @@ module.exports = (env) ->
 
     @pollAllGroups: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.groups().then(resolve)
+        return hueApi.groups().then(resolve, reject)
       ).then(BaseHueLightGroup.allGroupsReceived)
 
     @allGroupsReceived: (groupsResult) ->
@@ -225,7 +225,7 @@ module.exports = (env) ->
 
     poll: ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
-        @hueApi.getGroup(@hueId).then(resolve)
+        @hueApi.getGroup(@hueId).then(resolve, reject)
       ).then(@_statusReceived, @_apiError)
 
     _statusReceived: (result) =>
@@ -245,7 +245,7 @@ module.exports = (env) ->
     setLightState: (hueState) ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
         env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState._values))
-        @hueApi.setGroupLightState(@hueId, hueState).then(resolve)
+        @hueApi.setGroupLightState(@hueId, hueState).then(resolve, reject)
       ).then(( => @_mergeLightState hueState), @_apiError)
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
