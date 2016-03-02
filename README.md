@@ -51,6 +51,14 @@ Optionally, you can specify a different TCP port number, a timeout for Hue API c
       "hueApiConcurrency": 2
 ```
 
+If you get error messages like:
+```Hue API maximum queue length (11) exceeded```
+it means that the plugin can't send API requests to the Hue bridge fast enough (it uses a FIFO queue with configurable concurrency, see above). That's probably not a good sign, but you can override the maximum queue length from the auto calculated default if you wish:
+
+```json
+      "hueApiQueueMaxLength": 30
+```
+
 ### Device configuration
 
 Currently all Hue devices need to be added to the `devices` section in Pimatic's `config.json`. At minimum the device needs to be given a unique Pimatic device id, a device class, and the Hue id as it is known by the bridge.
