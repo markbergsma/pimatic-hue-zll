@@ -191,11 +191,11 @@ $(document).on 'templateinit', (event) ->
       @satValue = ko.observable(if satAttribute.value()? then satAttribute.value() else 0)
       hueAttribute.value.subscribe( (newHue) =>
         @hueValue(newHue)
-        @_updateColorPicker()
+        @_updateColorPicker() unless @_colorChanged
       )
       satAttribute.value.subscribe( (newSat) =>
         @satValue(newSat)
-        @_updateColorPicker()
+        @_updateColorPicker() unless @_colorChanged
       )
       cmAttribute.value.subscribe(@_updateColorPicker)
 
@@ -203,7 +203,7 @@ $(document).on 'templateinit', (event) ->
       super(elements)
       @colorPickerEle = $(elements).find('.ui-colorpicker')
       @colorPicker = @colorPickerEle.find('.light-color')
-      @colorPicker.spectrum(
+      @colorPicker?.spectrum(
         color: @colorFromHueSat()
         preferredFormat: 'hsv'
         showButtons: false
@@ -248,14 +248,14 @@ $(document).on 'templateinit', (event) ->
         ).then(ajaxShowToast, ajaxAlertFail)
 
     _recheckColorPickerChanges: =>
-      if @_colorChanged
+      if @_colorChanged and @colorPicker?
         # If the value changed while an API request was underway, send a new request
         # with the _current_ value
         return @_changeColor @colorPicker.spectrum('get')
 
     _toggleColorPickerDisable: =>
       disable = @_disableInputs()
-      @colorPicker.spectrum(if disable then 'disable' else 'enable')
+      pimatic.try => @colorPicker.spectrum(if disable then 'disable' else 'enable')
       @colorPickerEle.toggleClass('ui-state-disabled', disable)
       @colorPickerEle.find(".sp-preview").toggleClass('ui-state-disabled', disable)
 
