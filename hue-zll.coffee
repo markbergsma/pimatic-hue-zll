@@ -45,12 +45,9 @@ module.exports = (env) ->
       BaseHueDevice.hueQ.concurrency = @config.hueApiConcurrency
       BaseHueDevice.hueQ.timeout = @config.timeout
 
-      @hueApi.version().then(( (version) =>
-        env.logger.info("Connected to bridge #{version['name']}, " +
-          "API version #{version['version']['api']}, software #{version['version']['software']}")
-      ), @_hueApiRequestFailed)
-      @hueApi.lights().then(( (result) => env.logger.debug result), @_hueApiRequestFailed)
-      @hueApi.groups().then(( (result) => env.logger.debug result), @_hueApiRequestFailed)
+      BaseHueDevice.bridgeVersion(@hueApi)
+      BaseHueLight.inventory(@hueApi)
+      BaseHueLightGroup.inventory(@hueApi)
 
       deviceConfigDef = require("./device-config-schema")
 
@@ -109,6 +106,14 @@ module.exports = (env) ->
       autoStart: true
     })
 
+    @bridgeVersion: (hueApi) ->
+      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        return hueApi.version().then(resolve, reject)
+      ).then(( (version) =>
+        env.logger.info("Connected to bridge #{version['name']}, " +
+          "API version #{version['version']['api']}, software #{version['version']['software']}")
+        ), @_apiError)
+
     constructor: (@device, @hueApi) ->
       BaseHueDevice.hueQ.maxLength++
 
@@ -122,6 +127,11 @@ module.exports = (env) ->
     @statusCallbacks: {}
 
     # Static methods for polling all lights
+
+    @inventory: (hueApi) ->
+      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        return hueApi.lights().then(resolve, reject)
+      ).then(( (result) => env.logger.debug result ), @_apiError)
 
     @pollAllLights: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
@@ -207,6 +217,11 @@ module.exports = (env) ->
     @statusCallbacks: {}
 
     # Static methods for polling all lights
+
+    @inventory: (hueApi) ->
+      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        return hueApi.groups().then(resolve, reject)
+      ).then(( (result) => env.logger.debug result ), @_apiError)
 
     @pollAllGroups: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
