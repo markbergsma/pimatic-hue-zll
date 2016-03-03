@@ -10,6 +10,7 @@
     "actions.coffee",
     "app",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "version": "0.1.0",
@@ -19,6 +20,7 @@
     "type": "git",
     "url": "git://github.com/markbergsma/pimatic-hue-zll.git"
   },
+  "bugs": "https://github.com/markbergsma/pimatic-hue-zll/issues",
   "configSchema": "hue-zll-config-schema.coffee",
   "dependencies": {
     "es6-promise": "^3.0.2",
