@@ -93,10 +93,6 @@ module.exports = (env) ->
           # Override the default auto calculated maximum queue length
           BaseHueLight.hueQ.maxLength = @config.hueApiQueueMaxLength
 
-    _hueApiRequestFailed: (error) ->
-      env.logger.error("Hue API request failed!", error.message)
-      return error
-
     prepareConfig: (deviceConfig) ->
       deviceConfig.name = "" unless deviceConfig.name?
 
