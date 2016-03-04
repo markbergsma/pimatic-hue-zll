@@ -256,8 +256,8 @@ $(document).on 'templateinit', (event) ->
     _toggleColorPickerDisable: =>
       disable = @_disableInputs()
       pimatic.try => @colorPicker.spectrum(if disable then 'disable' else 'enable')
-      @colorPickerEle.toggleClass('ui-state-disabled', disable)
-      @colorPickerEle.find(".sp-preview").toggleClass('ui-state-disabled', disable)
+      @colorPickerEle?.toggleClass('ui-state-disabled', disable)
+      @colorPickerEle?.find(".sp-preview")?.toggleClass('ui-state-disabled', disable)
 
     _onStateChange: (newState) =>
       super(newState)
