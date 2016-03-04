@@ -199,7 +199,7 @@ module.exports = (env) ->
       ls.transition(@device.config.transitionTime) if @device.config.transitionTime?
       return ls
 
-    getLightState: -> @lightStatusResult.state
+    getLightStatus: -> @lightStatusResult
 
     changeHueState: (hueStateChange) ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
@@ -288,6 +288,13 @@ module.exports = (env) ->
     getReachable: -> @waitForInit ( => @_reachable )
 
     poll: -> @hue.poll()
+
+    saveLightState: => @waitForInit ( =>
+      return hueapi.lightState.create @filterConflictingState @hue.getLightStatus().state
+    )
+
+    restoreLightState: (stateChange) =>
+      return @hue.changeHueState(stateChange).then( => @_lightStateReceived(stateChange.payload()) )
 
     _lightStateReceived: (rstate) =>
       @_setState rstate.on
@@ -420,6 +427,13 @@ module.exports = (env) ->
       @_setColormode rstate.colormode if rstate.colormode?
       return rstate
 
+    filterConflictingState: (state) ->
+      filteredState = {}
+      filteredState[k] = v for k, v of state when not state.colormode? or not (
+        (k in ['hue','sat'] and state.colormode != 'hs') or
+          (k == 'xy' and state.colormode != 'xy') or (k == 'ct' and state.colormode != 'ct'))
+      return filteredState
+
   extend HueZLLColorTempLight.prototype, ColorTempMixin
   extend HueZLLColorTempLight.prototype, ColormodeMixin
 
@@ -519,6 +533,13 @@ module.exports = (env) ->
 
     getHue: -> @waitForInit ( => @_hue )
     getSat: -> @waitForInit ( => @_sat )
+
+    filterConflictingState: (state) ->
+      filteredState = {}
+      filteredState[k] = v for k, v of state when not state.colormode? or not (
+        (k in ['hue','sat'] and state.colormode != 'hs') or
+          (k == 'xy' and state.colormode != 'xy') or (k == 'ct' and state.colormode != 'ct'))
+      return filteredState
 
   extend HueZLLColorLight.prototype, ColormodeMixin
 

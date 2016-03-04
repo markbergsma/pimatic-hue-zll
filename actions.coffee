@@ -5,6 +5,22 @@ module.exports = (env) ->
   M = env.matcher
   assert = env.require 'cassert'
 
+  class HueZLLRestorableActionHandler extends env.actions.ActionHandler
+    hasRestoreAction: -> yes
+
+    executeRestoreAction: (@simulate) =>
+      if @simulate
+        return "would have restored the previous light state"
+      else
+        return @savedStateChange
+          .then(@device.restoreLightState)
+          .then( => "restored the previous light state" )
+
+    _saveState: ->
+      # Store the (promised) current light state in case we need to restore it
+      @savedStateChange = @device.saveLightState()
+      return @savedStateChange
+
   class CtActionProvider extends env.actions.ActionProvider
     constructor: (@framework) ->
 
@@ -48,37 +64,23 @@ module.exports = (env) ->
         actionHandler: new CtActionHandler(@framework, device, value)
       }
 
-  class CtActionHandler extends env.actions.ActionHandler
+  class CtActionHandler extends HueZLLRestorableActionHandler
     constructor: (@framework, @device, @expr) ->
       assert @device?
       assert @expr?
 
-    executeAction: (simulate) =>
+    executeAction: (@simulate) =>
       # First evaluate an expression into a value if needed
       if @expr? and isNaN(@expr)
         ctValue = @framework.variableManager.evaluateExpression(@expr)
       else
         ctValue = Promise.resolve @expr
 
-      if simulate
-        return ctValue.then( (value) => "would change color temperature to #{value} mired" )
+      if @simulate
+        return ctValue.then( (ct) => "would change color temperature to #{ct} mired" )
       else
-        # Store the (promised) current Ct value in case we need to restore it
-        @lastCt = @device.getCt()
-        return ctValue.then( (value) =>
-          @device.changeCtTo(value).then( => "changed color temperature to #{value} mired" )
-        )
-
-    hasRestoreAction: -> yes
-
-    executeRestoreAction: (simulate) =>
-      if simulate
-        return Promise.resolve "would restore color temperature to #{value} mired"
-      else
-        return @lastCt.then( (value) =>
-          @device.changeCtTo(value)
-          return "restored color temperature to #{value} mired"
-        )
+        return Promise.join ctValue, @_saveState(), ( (ct) =>
+          @device.changeCtTo(ct).then( => "changed color temperature to #{ct} mired" ) )
 
   class HueSatActionProvider extends env.actions.ActionProvider
     constructor: (@framework) ->
@@ -150,7 +152,7 @@ module.exports = (env) ->
         actionHandler: new HueSatActionHandler(@framework, device, hueExpr, satExpr)
       }
 
-  class HueSatActionHandler extends env.actions.ActionHandler
+  class HueSatActionHandler extends HueZLLRestorableActionHandler
     constructor: (@framework, @device, @hueExpr, @satExpr) ->
       assert @device?
       assert @hueExpr? or @satExpr?
@@ -169,11 +171,6 @@ module.exports = (env) ->
 
       return Promise.join huePromise, satPromise, @_changeHueSat
 
-    hasRestoreAction: -> yes
-
-    executeRestoreAction: (@simulate) =>
-      return Promise.join @lastHueSat[0], @lastHueSat[1], @_changeHueSat
-
     _changeHueSat: (hueValue, satValue) =>
       if hueValue? and satValue?
         f = (hue, sat) => @device.changeHueSatTo hue, sat
@@ -188,9 +185,9 @@ module.exports = (env) ->
       if @simulate
         return Promise.resolve "would have #{msg}"
       else
-        # Store the (promised) current attributes in case we need to restore them
-        @lastHueSat = [@device.getHue(), @device.getSat()]
-        return f(hueValue, satValue).then( => msg )
+        return @_saveState()
+          .then( => f(hueValue, satValue))
+          .then( => msg )
 
 
   return exports = {
