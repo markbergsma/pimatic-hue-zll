@@ -146,8 +146,8 @@ module.exports = (env) ->
 
     constructor: (@device, @hueApi, @hueId) ->
       super(@device, @hueApi)
-      @lightState = hueapi.lightState.create()
-      @lightStatusResult = {}
+      @lightStatusResult =
+        state: {}
       @deviceStateCallback = null
       @_setupStatusPolling()
 
@@ -168,21 +168,20 @@ module.exports = (env) ->
         return @hueApi.lightStatus(@hueId).then(resolve, reject)
       ).then(@_statusReceived, @_apiError)
 
-    _diffState: (newLightState) ->
+    _diffState: (newRState) ->
+      assert @lightStatusResult?.state?
+      lstate = @lightStatusResult.state
       diff = {}
-      diff[k] = v for k, v of newLightState._values when (
-          not @lightState._values[k]? or
-          k == 'xy' and ((v[0] != @lightState._values['xy'][0]) or
-            (v[1] != @lightState._values['xy'][1])) or
-          (k != 'xy' and @lightState._values[k] != v))
+      diff[k] = v for k, v of newRState when (
+          not lstate[k]? or
+          (k == 'xy' and ((v[0] != lstate['xy'][0]) or (v[1] != lstate['xy'][1]))) or
+          (k != 'xy' and lstate[k] != v))
       return diff
 
     _statusReceived: (result) =>
-      newLightState = hueapi.lightState.create(result.state)
-      diff = @_diffState(newLightState)
+      diff = @_diffState(result.state)
       if Object.keys(diff).length > 0
-        env.logger.debug("light #{@hueId} state change: " + JSON.stringify(diff))
-      @lightState = newLightState
+        env.logger.debug "Received light #{@hueId} state change:", JSON.stringify(diff)
       @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
@@ -190,22 +189,22 @@ module.exports = (env) ->
       @deviceStateCallback?(result.state)
       return result.state
 
-    _mergeLightState: (stateChange) ->
-      @lightState._values[k] = v for k, v of stateChange._values
-      @lightState
+    _mergeStateChange: (stateChange) ->
+      @lightStatusResult.state[k] = v for k, v of stateChange.payload()
+      @lightStatusResult.state
 
-    createLightState: ->
+    prepareStateChange: ->
       ls = hueapi.lightState.create()
       ls.transition(@device.config.transitionTime) if @device.config.transitionTime?
       return ls
 
-    getLightState: -> @lightState
+    getLightState: -> @lightStatusResult.state
 
-    setLightState: (hueState) ->
+    changeHueState: (hueStateChange) ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        env.logger.debug("Setting light #{@hueId} state: " + JSON.stringify(hueState._values))
-        return @hueApi.setLightState(@hueId, hueState).then(resolve, reject)
-      ).then(( => @_mergeLightState hueState), @_apiError)
+        env.logger.debug "Changing light #{@hueId} state:", JSON.stringify(hueStateChange.payload())
+        return @hueApi.setLightState(@hueId, hueStateChange).then(resolve, reject)
+      ).then(( => @_mergeStateChange hueStateChange), @_apiError)
 
   class BaseHueLightGroup extends BaseHueLight
 
@@ -241,11 +240,12 @@ module.exports = (env) ->
 
     _statusReceived: (result) =>
       stateObj = result.lastAction or result.action
-      newGroupState = hueapi.lightState.create(stateObj)
-      diff = @_diffState(newGroupState)
+      diff = @_diffState(stateObj)
       if Object.keys(diff).length > 0
-        env.logger.debug("group #{@hueId} state change: " + JSON.stringify(diff))
-      @lightState = newGroupState
+        env.logger.debug "Received group #{@hueId} state change:", JSON.stringify(diff)
+      result.state = stateObj
+      delete result.lastAction if result.lastAction?
+      delete result.action if result.action?
       @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
@@ -253,11 +253,11 @@ module.exports = (env) ->
       @deviceStateCallback?(stateObj)
       return stateObj
 
-    setLightState: (hueState) ->
+    changeHueState: (hueStateChange) ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
-        env.logger.debug("Setting group #{@hueId} state: " + JSON.stringify(hueState._values))
-        @hueApi.setGroupLightState(@hueId, hueState).then(resolve, reject)
-      ).then(( => @_mergeLightState hueState), @_apiError)
+        env.logger.debug "Changing group #{@hueId} state:", JSON.stringify(hueStateChange.payload())
+        @hueApi.setGroupLightState(@hueId, hueStateChange).then(resolve, reject)
+      ).then(( => @_mergeStateChange hueStateChange), @_apiError)
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
@@ -305,8 +305,8 @@ module.exports = (env) ->
         @updateName @hue.name
 
     changeStateTo: (state) ->
-      hueState = @hue.createLightState().on(state)
-      return @hue.setLightState(hueState).then( ( => @_setState state) )
+      hueStateChange = @hue.prepareStateChange().on(state)
+      return @hue.changeHueState(hueStateChange).then( ( => @_setState state) )
 
     _setReachable: (reachable) ->
       unless @_reachable is reachable
@@ -348,8 +348,8 @@ module.exports = (env) ->
       return rstate
 
     changeDimlevelTo: (state) ->
-      hueState = @hue.createLightState().on(true).bri(state / 100 * 254)
-      return @hue.setLightState(hueState).then( ( =>
+      hueStateChange = @hue.prepareStateChange().on(true).bri(state / 100 * 254)
+      return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setDimlevel state
       ) )
@@ -369,8 +369,8 @@ module.exports = (env) ->
     _ct: null    
 
     changeCtTo: (ct) ->
-      hueState = @hue.createLightState().on(true).ct(ct)
-      return @hue.setLightState(hueState).then( ( =>
+      hueStateChange = @hue.prepareStateChange().on(true).ct(ct)
+      return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setCt ct
       ) )
@@ -484,22 +484,22 @@ module.exports = (env) ->
       return rstate
 
     changeHueTo: (hue) ->
-      hueState = @hue.createLightState().on(true).hue(hue / 100 * 65535)
-      return @hue.setLightState(hueState).then( ( =>
+      hueStateChange = @hue.prepareStateChange().on(true).hue(hue / 100 * 65535)
+      return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setHue hue
       ) )
 
     changeSatTo: (sat) ->
-      hueState = @hue.createLightState().on(true).sat(sat / 100 * 254)
-      return @hue.setLightState(hueState).then( ( =>
+      hueStateChange = @hue.prepareStateChange().on(true).sat(sat / 100 * 254)
+      return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setSat sat
       ) )
 
     changeHueSatTo: (hue, sat) ->
-      hueState = @hue.createLightState().on(true).hue(hue / 100 * 65535).sat(sat / 100 * 254)
-      return @hue.setLightState(hueState).then( ( =>
+      hueStateChange = @hue.prepareStateChange().on(true).hue(hue / 100 * 65535).sat(sat / 100 * 254)
+      return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setHue hue
         @_setSat sat
