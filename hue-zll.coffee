@@ -288,8 +288,10 @@ module.exports = (env) ->
           type: t.boolean
 
     # Wait on first poll on initialization
-    getState: -> Promise.join @lightStateInitialized, ( => @_state )
-    getReachable: -> Promise.join @lightStateInitialized, ( => @_reachable )
+    waitForInit: (callback) => Promise.join @lightStateInitialized, callback
+
+    getState: -> @waitForInit ( => @_state )
+    getReachable: -> @waitForInit ( => @_reachable )
 
     poll: -> @hue.poll()
 
@@ -340,7 +342,7 @@ module.exports = (env) ->
               type: t.number
 
     # Wait on first poll on initialization
-    getDimlevel: -> Promise.join @lightStateInitialized, ( => @_dimlevel )
+    getDimlevel: -> @waitForInit ( => @_dimlevel )
 
     _lightStateReceived: (rstate) =>
       super(rstate)
@@ -383,7 +385,7 @@ module.exports = (env) ->
         @_ct = ct
         @emit "ct", ct
 
-    getCt: -> Promise.join @lightStateInitialized, ( => @_ct )
+    getCt: -> @waitForInit ( => @_ct )
 
   ColormodeMixin =
     _colormode: null
@@ -393,7 +395,7 @@ module.exports = (env) ->
         @_colormode = colormode
         @emit "colormode", colormode
 
-    getColormode: -> Promise.join @lightStateInitialized, ( => @_colormode )
+    getColormode: -> @waitForInit ( => @_colormode )
 
   class HueZLLColorTempLight extends HueZLLDimmableLight
     HueClass: BaseHueLight
@@ -521,8 +523,8 @@ module.exports = (env) ->
         @_sat = satVal
         @emit "sat", satVal
 
-    getHue: -> Promise.join @lightStateInitialized, ( => @_hue )
-    getSat: -> Promise.join @lightStateInitialized, ( => @_sat )
+    getHue: -> @waitForInit ( => @_hue )
+    getSat: -> @waitForInit ( => @_sat )
 
   extend HueZLLColorLight.prototype, ColormodeMixin
 
