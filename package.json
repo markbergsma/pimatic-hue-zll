@@ -1,6 +1,6 @@
 {
   "name": "pimatic-hue-zll",
-  "description": "Pimatic integration with (Zigbee Link Light based) Philips Hue",
+  "description": "Pimatic integration with (Zigbee Light Link based) Philips Hue",
   "author": "Mark Bergsma <mark@nedworks.org>",
   "main": "hue-zll",
   "files": [

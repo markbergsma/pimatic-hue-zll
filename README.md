@@ -1,8 +1,8 @@
 # pimatic-hue-zll
 
-Integration of Pimatic with (Zigbee Link Light based) Philips Hue networks, using the Philips Hue (bridge) API.
+Integration of Pimatic with (Zigbee Light Link based) Philips Hue networks, using the Philips Hue (bridge) API.
 
-This plugin allows control of Philips Hue lights and other Zigbee Link Light (ZLL) based devices from Pimatic, and the status of Hue devices can be observed and used as events for Pimatic rules interacting with other devices.
+This plugin allows control of Philips Hue lights and other Zigbee Light Link (ZLL) based devices from Pimatic, and the status of Hue devices can be observed and used as events for Pimatic rules interacting with other devices.
 
 The Hue system supports 5 light types, which have counterparts in the ZLL specification:
 
