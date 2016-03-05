@@ -118,6 +118,7 @@ module.exports = (env) ->
       throw error
 
   class BaseHueLight extends BaseHueDevice
+    devDescr: "light"
 
     @globalPolling: null
     @statusCallbacks: {}
@@ -181,7 +182,7 @@ module.exports = (env) ->
     _statusReceived: (result) =>
       diff = @_diffState(result.state)
       if Object.keys(diff).length > 0
-        env.logger.debug "Received light #{@hueId} state change:", JSON.stringify(diff)
+        env.logger.debug "Received #{@devDescr} #{@hueId} state change:", JSON.stringify(diff)
       @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
@@ -207,6 +208,7 @@ module.exports = (env) ->
       ).then(( => @_mergeStateChange hueStateChange), @_apiError)
 
   class BaseHueLightGroup extends BaseHueLight
+    devDescr: "group"
 
     @globalPolling: null
     @statusCallbacks: {}
@@ -239,19 +241,11 @@ module.exports = (env) ->
       ).then(@_statusReceived, @_apiError)
 
     _statusReceived: (result) =>
-      stateObj = result.lastAction or result.action
-      diff = @_diffState(stateObj)
-      if Object.keys(diff).length > 0
-        env.logger.debug "Received group #{@hueId} state change:", JSON.stringify(diff)
-      result.state = stateObj
+      # Light groups don't have a .state object, but a .lastAction or .action instead
+      result.state = result.lastAction or result.action
       delete result.lastAction if result.lastAction?
       delete result.action if result.action?
-      @lightStatusResult = result
-      @name = result.name if result.name?
-      @type = result.type if result.type?
-
-      @deviceStateCallback?(stateObj)
-      return stateObj
+      return super(result)
 
     changeHueState: (hueStateChange) ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
