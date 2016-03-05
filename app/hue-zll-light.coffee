@@ -82,7 +82,7 @@ $(document).on 'templateinit', (event) ->
 
     _onReachableChange: (nowReachable) =>
       pimatic.try => @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
-      @switchEle.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
+      @switchEle?.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
 
   class HueZLLDimmableItem extends HueZLLOnOffItem
     constructor: (templData, @device) ->
