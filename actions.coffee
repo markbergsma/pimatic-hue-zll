@@ -5,13 +5,13 @@ module.exports = (env) ->
   M = env.matcher
   assert = env.require 'cassert'
 
-  matchTransitionExpression = (match, callback) ->
-    return match.optional( (next) =>
+  matchTransitionExpression = (match, callback, optional=yes) ->
+    matcher = ( (next) =>
       next.match(" with", optional: yes)
-        .match(" transition ")
-        .match("time ", optional: yes)
+        .match([" transition ", " transition time "])
         .matchTimeDuration(wildcard: "{duration}", type: "text", callback)
     )
+    return if optional then match.optional(matcher) else matcher(match)
 
   class HueZLLRestorableActionHandler extends env.actions.ActionHandler
     hasRestoreAction: -> yes
@@ -28,6 +28,71 @@ module.exports = (env) ->
       # Store the (promised) current light state in case we need to restore it
       @savedStateChange = @device.saveLightState(transitionTime)
       return @savedStateChange
+
+  class HueZLLDimmerActionProvider extends env.actions.ActionProvider
+    constructor: (@framework) ->
+
+    parseAction: (input, context) ->
+      # FIXME: may include non-Hue lights which don't support transitionTime
+      dimmableLights = (device for own id, device of @framework.deviceManager.devices \
+                         when device.hasAction("changeDimlevelTo"))
+      return if dimmableLights?.length is 0
+
+      device = null
+      valueTokens = null
+      match = M(input, context)
+        .match("dim hue ")
+        .matchDevice(dimmableLights, (next, d) =>
+          if device? and device.id isnt d.id
+            context?.addError(""""#{input.trim()}" is ambiguous (device).""")
+            return
+          device = d
+        )
+        .match(" to ")
+        .matchNumericExpression( (next, ts) => valueTokens = ts )
+        .match('%', optional: yes)
+
+      # "[with] transition [time] 5s"
+      transitionMs = null
+      match = matchTransitionExpression(match, ( (m, {time, unit, timeMs}) =>
+        transitionMs = timeMs
+      ), no)
+
+      unless match? and valueTokens? and transitionMs? then return null
+
+      if valueTokens.length is 1 and not isNaN(valueTokens[0])
+        unless 0.0 <= parseFloat(valueTokens[0]) <= 100.0
+          context?.addError("Dimlevel must be between 0% and 100%")
+          return null
+      else
+        return null
+
+      return {
+        token: match.getFullMatch()
+        nextInput: input.substring(match.getFullMatch().length)
+        actionHandler: new HueZLLDimmerActionHandler(@framework, device, valueTokens, transitionMs)
+      }
+
+  class HueZLLDimmerActionHandler extends HueZLLRestorableActionHandler
+    constructor: (@framework, @device, @expr, @transitionTime=null) ->
+      assert @device?
+      assert @expr?
+
+    executeAction: (@simulate) =>
+      # First evaluate an expression into a value if needed
+      if @expr? and isNaN(@expr)
+        dimValue = @framework.variableManager.evaluateExpression(@expr)
+      else
+        dimValue = Promise.resolve @expr
+
+      return Promise.join dimValue, @_saveState(@transitionTime),
+        ( (dimlevel) =>
+          if @simulate
+            return "would have changed dimlevel to #{dimlevel}%%"
+          else
+            return @device.changeDimlevelTo(dimlevel, @transitionTime)
+              .then( => "changed dimlevel to #{dimlevel}%%" )
+        )
 
   class CtActionProvider extends env.actions.ActionProvider
     constructor: (@framework) ->
@@ -213,6 +278,7 @@ module.exports = (env) ->
 
 
   return exports = {
+    HueZLLDimmerActionProvider,
     CtActionProvider,
     HueSatActionProvider
   }
