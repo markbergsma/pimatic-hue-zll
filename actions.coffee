@@ -90,11 +90,14 @@ module.exports = (env) ->
       else
         ctValue = Promise.resolve @expr
 
-      if @simulate
-        return ctValue.then( (ct) => "would have changed color temperature to #{ct} mired" )
-      else
-        return Promise.join ctValue, @_saveState(@transitionTime), ( (ct) =>
-          @device.changeCtTo(ct, @transitionTime).then( => "changed color temperature to #{ct} mired" ) )
+      return Promise.join ctValue, @_saveState(@transitionTime),
+        ( (ct) =>
+          if @simulate
+            return "would have changed color temperature to #{ct} mired"
+          else
+            return @device.changeCtTo(ct, @transitionTime)
+              .then( => "changed color temperature to #{ct} mired" )
+        )
 
   class HueSatActionProvider extends env.actions.ActionProvider
     constructor: (@framework) ->
@@ -189,27 +192,24 @@ module.exports = (env) ->
       else
         satPromise = Promise.resolve @satExpr
 
-      return Promise.join huePromise, satPromise, @_changeHueSat
+      return Promise.join huePromise, satPromise, @_saveState(@transitionTime), @_changeHueSat
 
     _changeHueSat: (hueValue, satValue) =>
-      msg = if @restoring then "restored" else "changed"
       if hueValue? and satValue?
         f = (hue, sat) => @device.changeHueSatTo hue, sat, @transitionTime
-        msg += " color to hue #{hueValue}%% and sat #{satValue}%%"
+        msg = "changed color to hue #{hueValue}%% and sat #{satValue}%%"
       else if hueValue?
         f = (hue, sat) => @device.changeHueTo hue, @transitionTime
-        msg += " color to hue #{hueValue}%%"
+        msg = "changed color to hue #{hueValue}%%"
       else if satValue?
         f = (hue, sat) => @device.changeSatTo sat, @transitionTime
-        msg += " color to sat #{satValue}%%"
+        msg = "changed color to sat #{satValue}%%"
       msg += " transition time #{@transitionTime}ms" if @transitionTime?
 
       if @simulate
         return Promise.resolve "would have #{msg}"
       else
-        return @_saveState(@transitionTime)
-          .then( => f(hueValue, satValue))
-          .then( => msg )
+        return f(hueValue, satValue).then( => msg )
 
 
   return exports = {
