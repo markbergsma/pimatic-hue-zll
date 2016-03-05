@@ -24,9 +24,9 @@ module.exports = (env) ->
           .then(@device.restoreLightState)
           .then( => "restored the previous light state" )
 
-    _saveState: ->
+    _saveState: (transitionTime=null) ->
       # Store the (promised) current light state in case we need to restore it
-      @savedStateChange = @device.saveLightState()
+      @savedStateChange = @device.saveLightState(transitionTime)
       return @savedStateChange
 
   class CtActionProvider extends env.actions.ActionProvider
@@ -93,7 +93,7 @@ module.exports = (env) ->
       if @simulate
         return ctValue.then( (ct) => "would have changed color temperature to #{ct} mired" )
       else
-        return Promise.join ctValue, @_saveState(), ( (ct) =>
+        return Promise.join ctValue, @_saveState(@transitionTime), ( (ct) =>
           @device.changeCtTo(ct, @transitionTime).then( => "changed color temperature to #{ct} mired" ) )
 
   class HueSatActionProvider extends env.actions.ActionProvider
@@ -207,7 +207,7 @@ module.exports = (env) ->
       if @simulate
         return Promise.resolve "would have #{msg}"
       else
-        return @_saveState()
+        return @_saveState(@transitionTime)
           .then( => f(hueValue, satValue))
           .then( => msg )
 

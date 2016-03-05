@@ -289,8 +289,10 @@ module.exports = (env) ->
 
     poll: -> @hue.poll()
 
-    saveLightState: => @waitForInit ( =>
-      return hueapi.lightState.create @filterConflictingState @hue.getLightStatus().state
+    saveLightState: (transitionTime=null) => @waitForInit ( =>
+      hueStateChange = hueapi.lightState.create @filterConflictingState @hue.getLightStatus().state
+      hueStateChange.transition(transitionTime) if transitionTime?
+      return hueStateChange
     )
 
     restoreLightState: (stateChange) =>
