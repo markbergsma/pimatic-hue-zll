@@ -474,8 +474,8 @@ module.exports = (env) ->
 
     _lightStateReceived: (rstate) =>
       super(rstate)
-      @_setHue (rstate.hue / 65535 * 100)
-      @_setSat (rstate.sat / 254 * 100)
+      @_setHue (rstate.hue / 65535 * 100) if rstate.hue?
+      @_setSat (rstate.sat / 254 * 100) if rstate.sat?
       @_setColormode rstate.colormode if rstate.colormode?
       return rstate
 
@@ -549,7 +549,7 @@ module.exports = (env) ->
 
     _lightStateReceived: (rstate) =>
       super(rstate)
-      @_setCt rstate.ct
+      @_setCt rstate.ct if rstate.ct?
       return rstate
 
   extend HueZLLExtendedColorLight.prototype, ColorTempMixin
