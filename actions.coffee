@@ -44,7 +44,7 @@ module.exports = (env) ->
         .matchNumericExpression( (next, ts) => valueTokens = ts )
         .match('K', optional: yes, ( => kelvin = true ))
 
-      if not match? and valueTokens? then return null
+      unless match? and valueTokens? then return null
 
       if match? and valueTokens?.length is 1 and not isNaN(valueTokens[0])
         value = parseFloat(valueTokens[0])
