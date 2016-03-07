@@ -61,7 +61,8 @@ module.exports = (env) ->
         HueZLLColorLight,
         HueZLLColorLightGroup,
         HueZLLExtendedColorLight,
-        HueZLLExtendedColorLightGroup
+        HueZLLExtendedColorLightGroup,
+        HueZLLScenes
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -253,6 +254,44 @@ module.exports = (env) ->
         env.logger.debug "Changing group #{@hueId} state:", JSON.stringify(hueStateChange.payload())
         @hueApi.setGroupLightState(@hueId, hueStateChange).then(resolve, reject)
       ).then(( => @_mergeStateChange hueStateChange), @_apiError)
+
+  class BaseHueScenes extends BaseHueDevice
+
+    constructor: (@device, @hueApi) ->
+      super(@device, @hueApi)
+      @scenesByName = {}
+      @scenesPromise = null
+
+    getScenes: ->
+      return @scenesPromise = BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        return @hueApi.scenes().then(resolve, reject)
+      ).then(@_scenesReceived, @_apiError)
+
+    _scenesReceived: (result) =>
+      nameRegex = /^(.+) (on|off) (\d+)$/
+      for scene in result
+        try
+          tokens = scene.name.match(nameRegex)
+          if tokens?
+            scene.timestamp = parseInt(tokens[3])
+            @scenesByName[tokens[1]] = scene unless @scenesByName[tokens[1]]?.timestamp? > scene.timestamp
+          else
+            @scenesByName[scene.name] = scene
+        catch error
+          env.logger.error error.message
+
+    _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName] )
+
+    activateSceneByName: (sceneName) ->
+      return @_lookupSceneByName(sceneName).then( (scene) =>
+        if scene? and scene.id?
+          return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
+            env.logger.debug "Activating Hue scene id: #{scene.id} name:", sceneName
+            @hueApi.activateScene(scene.id).then(resolve, reject)
+          )
+        else
+          return Promise.reject(Error("Scene with name #{sceneName} not found"))
+      )
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
@@ -589,5 +628,46 @@ module.exports = (env) ->
   
   extend HueZLLExtendedColorLightGroup.prototype, ColorTempMixin
   extend HueZLLExtendedColorLightGroup.prototype, ColormodeMixin
+
+  class HueZLLScenes extends env.devices.Device
+    _lastActivatedScene: null
+
+    constructor: (@config, @hueApi, @_pluginConfig) ->
+      @id = @config.id
+      @name = @config.name
+      @extendAttributesActions()
+      super()
+
+      @hue = new BaseHueScenes(this, hueApi)
+      @hue.getScenes().then( =>
+        env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API."
+      )
+
+    extendAttributesActions: () =>
+      @attributes = extend (extend {}, @attributes),
+        lastActivatedScene:
+          description: "Hue scene last activated by Pimatic"
+          type: t.string
+
+      @actions = extend (extend {}, @actions),
+        activateScene:
+          description: "activates a Hue scene"
+          params:
+            sceneName:
+              type: t.string
+
+    activateScene: (sceneName) =>
+      return @hue.activateSceneByName(sceneName).then( =>
+        @_setLastActivatedScene sceneName
+      )
+
+    _setLastActivatedScene: (sceneName) ->
+      assert sceneName.length > 0
+      unless @_lastActivatedScene is sceneName
+        @_lastActivatedScene = sceneName
+        @emit "lastActivatedScene", sceneName
+
+    getLastActivatedScene: -> Promise.resolve @_lastActivatedScene
+
 
   return new HueZLLPlugin()

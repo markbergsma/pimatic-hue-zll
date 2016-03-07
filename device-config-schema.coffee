@@ -160,4 +160,9 @@ module.exports = {
         type: "number"
         default: -1
   },
+  HueZLLScenes: {
+    title: "Hue scenes"
+    type: "object"
+    properties: {}
+  }
 }
