@@ -72,6 +72,7 @@ module.exports = (env) ->
           })
 
       actions = require("./actions") env
+      @framework.ruleManager.addActionProvider(new actions.HueZLLDimmerActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.CtActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
 
@@ -289,8 +290,10 @@ module.exports = (env) ->
 
     poll: -> @hue.poll()
 
-    saveLightState: => @waitForInit ( =>
-      return hueapi.lightState.create @filterConflictingState @hue.getLightStatus().state
+    saveLightState: (transitionTime=null) => @waitForInit ( =>
+      hueStateChange = hueapi.lightState.create @filterConflictingState @hue.getLightStatus().state
+      hueStateChange.transition(transitionTime) if transitionTime?
+      return hueStateChange
     )
 
     restoreLightState: (stateChange) =>
@@ -350,8 +353,9 @@ module.exports = (env) ->
       @_setDimlevel rstate.bri / 254 * 100
       return rstate
 
-    changeDimlevelTo: (state) ->
+    changeDimlevelTo: (state, transitionTime=null) ->
       hueStateChange = @hue.prepareStateChange().on(true).bri(state / 100 * 254)
+      hueStateChange.transition(transitionTime) if transitionTime?
       return @hue.changeHueState(hueStateChange).then( ( =>
         @_setState true
         @_setDimlevel state
