@@ -285,28 +285,30 @@ module.exports = (env) ->
       # For Hue scenes, at the moment we just need one (arbitrary) HueZLLScenes device
       device = hueScenesDevices[0]
 
-      sceneName = null
+      sceneExpr = null
       match = M(input, context)
         .match("activate hue scene ")
-        .matchString( (m, tokens) => sceneName = tokens )
+        .matchStringWithVars( (m, tokens) => sceneExpr = tokens )
 
-      if match?.hadMatch() and sceneName? and device?
+      if match?.hadMatch() and sceneExpr? and device?
         return {
           token: match.getFullMatch()
           nextInput: input.substring(match.getFullMatch().length)
-          actionHandler: new ActivateHueSceneActionHandler(@framework, device, sceneName)
+          actionHandler: new ActivateHueSceneActionHandler(@framework, device, sceneExpr)
         }
       else
         return null
 
   class ActivateHueSceneActionHandler extends env.actions.ActionHandler
-    constructor: (@framework, @device, @sceneName) ->
+    constructor: (@framework, @device, @sceneExpr) ->
 
     executeAction: (simulate, context) ->
-      if simulate
-        return Promise.resolve "would have activated Hue scene #{@sceneName}"
-      else
-        return @device.activateScene(@sceneName).then( => "activated Hue scene #{@sceneName}" )
+      return @framework.variableManager.evaluateStringExpression(@sceneExpr).then( (sceneName) =>
+        if simulate
+          return "would have activated Hue scene #{sceneName}"
+        else
+          return @device.activateScene(sceneName).then( => "activated Hue scene #{sceneName}" )
+      )
 
   return exports = {
     HueZLLDimmerActionProvider,
