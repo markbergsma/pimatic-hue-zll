@@ -164,11 +164,18 @@ toggle HueLight after 30s
 dim HueLight to 20% for 1 minute
 ```
 
+Optionally you can specify a transition time for the change, e.g. to dim a light very slowly, and back:
+
+```
+dim hue HueLight to 0% with transition time 5s for 10s
+```
+(Unfortunately, currently ```dim hue``` needs to be used instead of ```dim```, to avoid conflict with the internal dim rule action in Pimatic.)
+
 For lights supporting color temperature control, the `set ct` action is added supporting mired and Kelvin values, and you can make rule actions with expressions like:
 
 ```
 set ct of HueLight to 300
-set color temperature of HueLight to 2700K
+set color temperature of HueLight to 2700K with transition time 1s
 set color temperature of HueLight to $OtherHueLight.ct for 10s
 set ct of HueLight to ($randomvar/2+153)
 ```
@@ -177,7 +184,7 @@ Color lights can be controlled with hue & saturation percentages using the `set 
 
 ```
 set color of HueLight to hue 50% and saturation 100%
-set color of HueLight to sat 10% hue 0% for 10s
+set color of HueLight to sat 10% hue 0% transition 1500ms for 10s
 ```
 
 Because the Hue bridge doesn't accept changes to attributes while a light is switched off, the plugin also turns on the light with each action other than on/off state changes.
