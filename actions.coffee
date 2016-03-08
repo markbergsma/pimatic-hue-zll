@@ -56,16 +56,14 @@ module.exports = (env) ->
       transitionMs = null
       match = matchTransitionExpression(match, ( (m, {time, unit, timeMs}) =>
         transitionMs = timeMs
-      ), no)
+      ), yes)
 
-      unless match? and valueTokens? and transitionMs? then return null
+      unless match? and valueTokens? then return null
 
       if valueTokens.length is 1 and not isNaN(valueTokens[0])
         unless 0.0 <= parseFloat(valueTokens[0]) <= 100.0
           context?.addError("Dimlevel must be between 0% and 100%")
           return null
-      else
-        return null
 
       return {
         token: match.getFullMatch()
