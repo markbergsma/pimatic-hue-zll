@@ -274,14 +274,14 @@ module.exports = (env) ->
         try
           tokens = scene.name.match(nameRegex)
           if tokens?
-            scene.timestamp = parseInt(tokens[3])
-            @scenesByName[tokens[1]] = scene unless @scenesByName[tokens[1]]?.timestamp? > scene.timestamp
+            lcname = tokens[1].toLowerCase()
+            @scenesByName[lcname] = scene
           else
-            @scenesByName[scene.name] = scene
+            @scenesByName[scene.name.toLowerCase()] = scene
         catch error
           env.logger.error error.message
 
-    _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName] )
+    _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName.toLowerCase()] )
 
     activateSceneByName: (sceneName) ->
       return @_lookupSceneByName(sceneName).then( (scene) =>
