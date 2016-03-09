@@ -285,10 +285,20 @@ module.exports = (env) ->
       # For Hue scenes, at the moment we just need one (arbitrary) HueZLLScenes device
       device = hueScenesDevices[0]
 
+      # See if we have a list of sceneNames ready
+      sceneNames = (('"'+name+'"' for name in device.getKnownSceneNames())) or []
+
       sceneExpr = null
       match = M(input, context)
         .match("activate hue scene ")
-        .matchStringWithVars( (m, tokens) => sceneExpr = tokens )
+        .or([
+          ( (next) =>
+            next.match(sceneNames, (m, tokens) => sceneExpr = tokens )
+          ),
+          ( (next) =>
+            next.matchStringWithVars( (m, tokens) => sceneExpr = tokens )
+          )
+        ])
 
       if match?.hadMatch() and sceneExpr? and device?
         return {

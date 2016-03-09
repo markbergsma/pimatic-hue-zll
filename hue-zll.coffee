@@ -263,7 +263,7 @@ module.exports = (env) ->
       @scenesByName = {}
       @scenesPromise = null
 
-    getScenes: ->
+    requestScenes: ->
       return @scenesPromise = BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return @hueApi.scenes().then(resolve, reject)
       ).then(@_scenesReceived, @_apiError)
@@ -274,9 +274,11 @@ module.exports = (env) ->
         try
           tokens = scene.name.match(nameRegex)
           if tokens?
-            lcname = tokens[1].toLowerCase()
+            scene.uniquename = tokens[1]
+            lcname = scene.uniquename.toLowerCase()
             @scenesByName[lcname] = scene
           else
+            scene.uniquename = scene.name
             @scenesByName[scene.name.toLowerCase()] = scene
         catch error
           env.logger.error error.message
@@ -640,7 +642,7 @@ module.exports = (env) ->
       super()
 
       @hue = new BaseHueScenes(this, hueApi)
-      @hue.getScenes().then( =>
+      @hue.requestScenes().then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API."
       )
 
@@ -669,6 +671,8 @@ module.exports = (env) ->
         @emit "lastActivatedScene", sceneName
 
     getLastActivatedScene: -> Promise.resolve @_lastActivatedScene
+
+    getKnownSceneNames: => (scene.uniquename for key, scene of @hue.scenesByName)
 
 
   return new HueZLLPlugin()
