@@ -285,12 +285,13 @@ module.exports = (env) ->
 
     _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName.toLowerCase()] )
 
-    activateSceneByName: (sceneName) ->
+    activateSceneByName: (sceneName, groupId=null) ->
       return @_lookupSceneByName(sceneName).then( (scene) =>
         if scene? and scene.id?
           return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
-            env.logger.debug "Activating Hue scene id: #{scene.id} name:", sceneName
-            @hueApi.activateScene(scene.id).then(resolve, reject)
+            env.logger.debug "Activating Hue scene id: #{scene.id} name: \"#{sceneName}\"" + \
+              if groupId? then " group: #{groupId}" else ""
+            @hueApi.activateScene(scene.id, groupId).then(resolve, reject)
           )
         else
           return Promise.reject(Error("Scene with name #{sceneName} not found"))
@@ -658,9 +659,11 @@ module.exports = (env) ->
           params:
             sceneName:
               type: t.string
+            groupId:
+              type: t.number
 
-    activateScene: (sceneName) =>
-      return @hue.activateSceneByName(sceneName).then( =>
+    activateScene: (sceneName, groupId=null) =>
+      return @hue.activateSceneByName(sceneName, groupId).then( =>
         @_setLastActivatedScene sceneName
       )
 
