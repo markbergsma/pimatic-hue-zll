@@ -106,17 +106,20 @@ module.exports = (env) ->
     @bridgeVersion: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return hueApi.version().then(resolve, reject)
-      ).then(( (version) =>
-        env.logger.info("Connected to bridge #{version['name']}, " +
-          "API version #{version['version']['api']}, software #{version['version']['software']}")
-        ), @_apiError)
+      ).then( (version) =>
+        env.logger.info "Connected to bridge #{version['name']}, " +
+          "API version #{version['version']['api']}, software #{version['version']['software']}"
+      ).catch(
+        (error) => env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
+      )
+
+    @_apiError: (error) ->
+      env.logger.error "Hue API request failed:", error.message
+      env.logger.debug error.stack
+      Promise.reject error
 
     constructor: (@device, @hueApi) ->
       BaseHueDevice.hueQ.maxLength++
-
-    _apiError: (error) ->
-      env.logger.error("Hue API request failed:", error.message)
-      throw error
 
   class BaseHueLight extends BaseHueDevice
     devDescr: "light"
@@ -129,12 +132,14 @@ module.exports = (env) ->
     @inventory: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return hueApi.lights().then(resolve, reject)
-      ).then(( (result) => env.logger.debug result ), @_apiError)
+      ).then( (result) => env.logger.debug result )
+      .catch( (error) => env.logger.error "Error while retrieving inventory of all lights:", error.message )
 
     @pollAllLights: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return hueApi.lights().then(resolve, reject)
       ).then(BaseHueLight.allLightsReceived)
+      .catch( (error) => env.logger.error "Error while polling all lights:", error.message )
 
     @allLightsReceived: (lightsResult) ->
       for light in lightsResult.lights
@@ -168,7 +173,8 @@ module.exports = (env) ->
     poll: ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return @hueApi.lightStatus(@hueId).then(resolve, reject)
-      ).then(@_statusReceived, @_apiError)
+      ).then(@_statusReceived)
+      .catch( (error) => env.logger.error "Error while polling light #{@hueId} status:", error.message )
 
     _diffState: (newRState) ->
       assert @lightStatusResult?.state?
@@ -206,7 +212,7 @@ module.exports = (env) ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         env.logger.debug "Changing light #{@hueId} state:", JSON.stringify(hueStateChange.payload())
         return @hueApi.setLightState(@hueId, hueStateChange).then(resolve, reject)
-      ).then(( => @_mergeStateChange hueStateChange), @_apiError)
+      ).then(( => @_mergeStateChange hueStateChange), BaseHueDevice._apiError)
 
   class BaseHueLightGroup extends BaseHueLight
     devDescr: "group"
@@ -219,12 +225,14 @@ module.exports = (env) ->
     @inventory: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return hueApi.groups().then(resolve, reject)
-      ).then(( (result) => env.logger.debug result ), @_apiError)
+      ).then( (result) => env.logger.debug result )
+      .catch( (error) => env.logger.error "Error while retrieving inventory of all light groups:", error.message )
 
     @pollAllGroups: (hueApi) ->
       BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
         return hueApi.groups().then(resolve, reject)
       ).then(BaseHueLightGroup.allGroupsReceived)
+      .catch( (error) => env.logger.error "Error while polling all light groups:", error.message )
 
     @allGroupsReceived: (groupsResult) ->
       for group in groupsResult
@@ -239,7 +247,8 @@ module.exports = (env) ->
     poll: ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
         @hueApi.getGroup(@hueId).then(resolve, reject)
-      ).then(@_statusReceived, @_apiError)
+      ).then(@_statusReceived)
+      .catch( (error) => env.logger.error "Error while polling light group #{@hueId} status:", error.message )
 
     _statusReceived: (result) =>
       # Light groups don't have a .state object, but a .lastAction or .action instead
@@ -252,7 +261,7 @@ module.exports = (env) ->
       return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
         env.logger.debug "Changing group #{@hueId} state:", JSON.stringify(hueStateChange.payload())
         @hueApi.setGroupLightState(@hueId, hueStateChange).then(resolve, reject)
-      ).then(( => @_mergeStateChange hueStateChange), @_apiError)
+      ).then(( => @_mergeStateChange hueStateChange), BaseHueDevice._apiError)
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
