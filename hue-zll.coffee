@@ -25,12 +25,24 @@ module.exports = (env) ->
     constructor: (options) ->
       super(options)
       @maxLength = options.maxLength or Infinity
+      @bindObject = options.bindObject
 
     pushTask: (promiseFunction) ->
       if @length < @maxLength
         return super(promiseFunction)
       else
         return Promise.reject Error("Hue API maximum queue length (#{@maxLength}) exceeded")
+
+    pushRequest: (request, args...) ->
+      return @pushTask(
+        (resolve, reject) =>
+          request.bind(@bindObject)(args..., (err, result) =>
+            if err
+              reject err
+            else
+              resolve result
+          )
+      )
 
   class HueZLLPlugin extends env.plugins.Plugin
 
@@ -44,6 +56,7 @@ module.exports = (env) ->
 
       BaseHueDevice.hueQ.concurrency = @config.hueApiConcurrency
       BaseHueDevice.hueQ.timeout = @config.timeout
+      BaseHueDevice.hueQ.bindObject = @hueApi
 
       BaseHueDevice.bridgeVersion(@hueApi)
       BaseHueLight.inventory(@hueApi)
@@ -104,11 +117,12 @@ module.exports = (env) ->
     })
 
     @bridgeVersion: (hueApi) ->
-      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.version().then(resolve, reject)
-      ).then( (version) =>
-        env.logger.info "Connected to bridge #{version['name']}, " +
-          "API version #{version['version']['api']}, software #{version['version']['software']}"
+      BaseHueDevice.hueQ.pushRequest(
+        hueApi.version
+      ).then(
+        (version) =>
+          env.logger.info "Connected to bridge #{version['name']}, " +
+            "API version #{version['version']['api']}, software #{version['version']['software']}"
       ).catch(
         (error) => env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
@@ -130,16 +144,22 @@ module.exports = (env) ->
     # Static methods for polling all lights
 
     @inventory: (hueApi) ->
-      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.lights().then(resolve, reject)
-      ).then( (result) => env.logger.debug result )
-      .catch( (error) => env.logger.error "Error while retrieving inventory of all lights:", error.message )
+      BaseHueDevice.hueQ.pushRequest(
+        hueApi.lights
+      ).then(
+        (result) => env.logger.debug result
+      ).catch(
+        (error) => env.logger.error "Error while retrieving inventory of all lights:", error.message
+      )
 
     @pollAllLights: (hueApi) ->
-      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.lights().then(resolve, reject)
-      ).then(BaseHueLight.allLightsReceived)
-      .catch( (error) => env.logger.error "Error while polling all lights:", error.message )
+      BaseHueDevice.hueQ.pushRequest(
+        hueApi.lights
+      ).then(
+        BaseHueLight.allLightsReceived
+      ).catch(
+        (error) => env.logger.error "Error while polling all lights:", error.message
+      )
 
     @allLightsReceived: (lightsResult) ->
       for light in lightsResult.lights
@@ -171,10 +191,13 @@ module.exports = (env) ->
       setInterval(( => @poll()), interval)
 
     poll: ->
-      return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return @hueApi.lightStatus(@hueId).then(resolve, reject)
-      ).then(@_statusReceived)
-      .catch( (error) => env.logger.error "Error while polling light #{@hueId} status:", error.message )
+      return BaseHueDevice.hueQ.pushRequest(
+        @hueApi.lightStatus, @hueId
+      ).then(
+        @_statusReceived)
+      .catch(
+        (error) => env.logger.error "Error while polling light #{@hueId} status:", error.message
+      )
 
     _diffState: (newRState) ->
       assert @lightStatusResult?.state?
@@ -223,16 +246,22 @@ module.exports = (env) ->
     # Static methods for polling all lights
 
     @inventory: (hueApi) ->
-      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.groups().then(resolve, reject)
-      ).then( (result) => env.logger.debug result )
-      .catch( (error) => env.logger.error "Error while retrieving inventory of all light groups:", error.message )
+      BaseHueDevice.hueQ.pushRequest(
+        hueApi.groups
+      ).then(
+        (result) => env.logger.debug result
+      ).catch(
+        (error) => env.logger.error "Error while retrieving inventory of all light groups:", error.message
+      )
 
     @pollAllGroups: (hueApi) ->
-      BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return hueApi.groups().then(resolve, reject)
-      ).then(BaseHueLightGroup.allGroupsReceived)
-      .catch( (error) => env.logger.error "Error while polling all light groups:", error.message )
+      BaseHueDevice.hueQ.pushRequest(
+        hueApi.groups
+      ).then(
+        BaseHueLightGroup.allGroupsReceived
+      ).catch(
+        (error) => env.logger.error "Error while polling all light groups:", error.message
+      )
 
     @allGroupsReceived: (groupsResult) ->
       for group in groupsResult
@@ -245,10 +274,13 @@ module.exports = (env) ->
 
 
     poll: ->
-      return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
-        @hueApi.getGroup(@hueId).then(resolve, reject)
-      ).then(@_statusReceived)
-      .catch( (error) => env.logger.error "Error while polling light group #{@hueId} status:", error.message )
+      return BaseHueLightGroup.hueQ.pushRequest(
+        @hueApi.getGroup, @hueId
+      ).then(
+        @_statusReceived
+      ).catch(
+        (error) => env.logger.error "Error while polling light group #{@hueId} status:", error.message
+      )
 
     _statusReceived: (result) =>
       # Light groups don't have a .state object, but a .lastAction or .action instead
