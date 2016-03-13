@@ -29,7 +29,8 @@ module.exports = (env) ->
 
     pushTask: (promiseFunction) ->
       if @length < @maxLength
-        return super(promiseFunction)
+        # Convert ES6 Promise to Bluebird
+        return Promise.resolve super(promiseFunction)
       else
         return Promise.reject Error("Hue API maximum queue length (#{@maxLength}) exceeded")
 
@@ -132,6 +133,19 @@ module.exports = (env) ->
       env.logger.debug error.stack
       Promise.reject error
 
+    @_apiPollingError: (error, repeatFunction, pollDescr="") =>
+      delayTime = null
+      switch error.code
+        when 'ECONNRESET'
+          delayTime = 0 # Put next request in the queue
+          error.message += " (connection reset)"
+        when 'ECONNREFUSED','EHOSTUNREACH','ENETUNREACH'
+          delayTime = 30000 # Slow down trying again
+      env.logger.error "Error while polling #{pollDescr}:", error.message
+      if delayTime?
+        env.logger.debug "Repeating Hue API request with #{delayTime}ms delay"
+        return Promise.delay(delayTime).then(repeatFunction)
+
     constructor: (@device, @hueApi) ->
       BaseHueDevice.hueQ.maxLength++
 
@@ -157,8 +171,12 @@ module.exports = (env) ->
         hueApi.lights
       ).then(
         BaseHueLight.allLightsReceived
-      ).catch(
-        (error) => env.logger.error "Error while polling all lights:", error.message
+      ).error(
+        (error) => BaseHueDevice._apiPollingError(
+            error,
+            ( => BaseHueLight.pollAllLights(hueApi) ),
+            "all lights"
+          )
       )
 
     @allLightsReceived: (lightsResult) ->
@@ -167,9 +185,15 @@ module.exports = (env) ->
           cb(light) for cb in BaseHueLight.statusCallbacks[light.id]
 
     @setupGlobalPolling: (interval, hueApi) ->
-      unless BaseHueLight.globalPolling?
-        BaseHueLight.globalPolling = setInterval(BaseHueLight.pollAllLights, interval, hueApi)
-
+      repeatPoll = () =>
+        firstPoll = BaseHueLight.pollAllLights(hueApi)
+        firstPoll.delay(interval).finally( =>
+            repeatPoll()
+            return null
+          )
+        return firstPoll
+      return BaseHueLight.globalPolling or
+        BaseHueLight.globalPolling = repeatPoll()
 
     constructor: (@device, @hueApi, @hueId) ->
       super(@device, @hueApi)
@@ -188,7 +212,14 @@ module.exports = (env) ->
         @constructor.statusCallbacks[hueId] = Array(callback)
 
     setupPolling: (interval) =>
-      setInterval(( => @poll()), interval)
+      repeatPoll = () =>
+        firstPoll = @poll()
+        firstPoll.delay(interval).finally( =>
+            repeatPoll()
+            return null
+          )
+        return firstPoll
+      return if interval > 0 then repeatPoll() else @poll()
 
     poll: ->
       return BaseHueDevice.hueQ.pushRequest(
@@ -259,8 +290,12 @@ module.exports = (env) ->
         hueApi.groups
       ).then(
         BaseHueLightGroup.allGroupsReceived
-      ).catch(
-        (error) => env.logger.error "Error while polling all light groups:", error.message
+      ).error(
+        (error) => BaseHueDevice._apiPollingError(
+            error,
+            ( => BaseHueLightGroup.pollAllGroups(hueApi) ),
+            "all light groups"
+          )
       )
 
     @allGroupsReceived: (groupsResult) ->
@@ -269,9 +304,15 @@ module.exports = (env) ->
           cb(group) for cb in BaseHueLightGroup.statusCallbacks[group.id]
 
     @setupGlobalPolling: (interval, hueApi) ->
-      unless BaseHueLightGroup.globalPolling?
-        BaseHueLightGroup.globalPolling = setInterval(BaseHueLightGroup.pollAllGroups, interval, hueApi)
-
+      repeatPoll = () =>
+        firstPoll = BaseHueLightGroup.pollAllGroups(hueApi)
+        firstPoll.delay(interval).finally( =>
+            repeatPoll()
+            return null
+          )
+        return firstPoll
+      return BaseHueLightGroup.globalPolling or
+        BaseHueLightGroup.globalPolling = repeatPoll()
 
     poll: ->
       return BaseHueLightGroup.hueQ.pushRequest(
@@ -310,11 +351,12 @@ module.exports = (env) ->
 
       @hue = new @HueClass(this, hueApi, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
-      # Enable global polling (for all lights or groups)
-      @HueClass.setupGlobalPolling(@_pluginConfig.polling, hueApi)
 
-      @hue.setupPolling(@config.polling or @_pluginConfig.polling) unless @config.polling < 0
-      @lightStateInitialized = @poll()
+      if @config.polling < 0
+        # Enable global polling (for all lights or groups)
+        @lightStateInitialized = @HueClass.setupGlobalPolling(@_pluginConfig.polling, hueApi)
+      else
+        @lightStateInitialized = @hue.setupPolling(@config.polling)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
 
     extendAttributesActions: () =>
