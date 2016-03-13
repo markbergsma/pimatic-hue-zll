@@ -346,9 +346,13 @@ module.exports = (env) ->
       @scenesPromise = null
 
     requestScenes: ->
-      return @scenesPromise = BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        return @hueApi.scenes().then(resolve, reject)
-      ).then(@_scenesReceived, @_apiError)
+      return @scenesPromise = BaseHueDevice.hueQ.pushRequest(
+        @hueApi.scenes
+      ).then(
+        @_scenesReceived
+      ).catch(
+        @_apiError
+      )
 
     _scenesReceived: (result) =>
       nameRegex = /^(.+) (on|off) (\d+)$/
