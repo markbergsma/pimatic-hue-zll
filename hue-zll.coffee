@@ -173,7 +173,7 @@ module.exports = (env) ->
         hueApi.lights
       ).then(
         BaseHueLight.allLightsReceived
-      ).error(
+      ).catch(
         (error) => BaseHueDevice._apiPollingError(
             error,
             ( => BaseHueLight.pollAllLights(hueApi) ),
@@ -292,7 +292,7 @@ module.exports = (env) ->
         hueApi.groups
       ).then(
         BaseHueLightGroup.allGroupsReceived
-      ).error(
+      ).catch(
         (error) => BaseHueDevice._apiPollingError(
             error,
             ( => BaseHueLightGroup.pollAllGroups(hueApi) ),
