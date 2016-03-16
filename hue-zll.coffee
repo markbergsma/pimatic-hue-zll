@@ -166,34 +166,10 @@ module.exports = (env) ->
         (error) => env.logger.error "Error while retrieving inventory of all lights:", error.message
       )
 
-    @pollAllLights: (hueApi) ->
-      BaseHueDevice.hueQ.pushRequest(
-        hueApi.lights
-      ).then(
-        BaseHueLight.allLightsReceived
-      ).catch(
-        (error) => BaseHueDevice._apiPollingError(
-            error,
-            ( => BaseHueLight.pollAllLights(hueApi) ),
-            "all lights"
-          )
-      )
-
     @allLightsReceived: (lightsResult) ->
       for light in lightsResult.lights
         if Array.isArray(BaseHueLight.statusCallbacks[light.id])
           cb(light) for cb in BaseHueLight.statusCallbacks[light.id]
-
-    @setupGlobalPolling: (interval, hueApi) ->
-      repeatPoll = () =>
-        firstPoll = BaseHueLight.pollAllLights(hueApi)
-        firstPoll.delay(interval).finally( =>
-            repeatPoll()
-            return null
-          )
-        return firstPoll
-      return BaseHueLight.globalPolling or
-        BaseHueLight.globalPolling = repeatPoll()
 
     constructor: (@device, @hueApi, @hueId) ->
       super(@device, @hueApi)
@@ -211,6 +187,17 @@ module.exports = (env) ->
       else
         @constructor.statusCallbacks[hueId] = Array(callback)
 
+    setupGlobalPolling: (interval) ->
+      repeatPoll = () =>
+        firstPoll = @pollAllLights()
+        firstPoll.delay(interval).finally( =>
+            repeatPoll()
+            return null
+          )
+        return firstPoll
+      return BaseHueLight.globalPolling or
+        BaseHueLight.globalPolling = repeatPoll()
+
     setupPolling: (interval) =>
       repeatPoll = () =>
         firstPoll = @poll()
@@ -220,6 +207,19 @@ module.exports = (env) ->
           )
         return firstPoll
       return if interval > 0 then repeatPoll() else @poll()
+
+    pollAllLights: () =>
+      BaseHueDevice.hueQ.pushRequest(
+        @hueApi.lights
+      ).then(
+        BaseHueLight.allLightsReceived
+      ).catch(
+        (error) => BaseHueDevice._apiPollingError(
+            error,
+            @pollAllLights,
+            "all lights"
+          )
+      )
 
     poll: ->
       return BaseHueDevice.hueQ.pushRequest(
@@ -285,27 +285,14 @@ module.exports = (env) ->
         (error) => env.logger.error "Error while retrieving inventory of all light groups:", error.message
       )
 
-    @pollAllGroups: (hueApi) ->
-      BaseHueDevice.hueQ.pushRequest(
-        hueApi.groups
-      ).then(
-        BaseHueLightGroup.allGroupsReceived
-      ).catch(
-        (error) => BaseHueDevice._apiPollingError(
-            error,
-            ( => BaseHueLightGroup.pollAllGroups(hueApi) ),
-            "all light groups"
-          )
-      )
-
     @allGroupsReceived: (groupsResult) ->
       for group in groupsResult
         if Array.isArray(BaseHueLightGroup.statusCallbacks[group.id])
           cb(group) for cb in BaseHueLightGroup.statusCallbacks[group.id]
 
-    @setupGlobalPolling: (interval, hueApi) ->
+    setupGlobalPolling: (interval) ->
       repeatPoll = () =>
-        firstPoll = BaseHueLightGroup.pollAllGroups(hueApi)
+        firstPoll = @pollAllGroups()
         firstPoll.delay(interval).finally( =>
             repeatPoll()
             return null
@@ -313,6 +300,19 @@ module.exports = (env) ->
         return firstPoll
       return BaseHueLightGroup.globalPolling or
         BaseHueLightGroup.globalPolling = repeatPoll()
+
+    pollAllGroups: () =>
+      BaseHueDevice.hueQ.pushRequest(
+        @hueApi.groups
+      ).then(
+        BaseHueLightGroup.allGroupsReceived
+      ).catch(
+        (error) => BaseHueDevice._apiPollingError(
+            error,
+            @pollAllGroups,
+            "all light groups"
+          )
+      )
 
     poll: ->
       return BaseHueLightGroup.hueQ.pushRequest(
@@ -354,7 +354,7 @@ module.exports = (env) ->
 
       if @config.polling < 0
         # Enable global polling (for all lights or groups)
-        @lightStateInitialized = @HueClass.setupGlobalPolling(@_pluginConfig.polling, hueApi)
+        @lightStateInitialized = @hue.setupGlobalPolling(@_pluginConfig.polling)
       else
         @lightStateInitialized = @hue.setupPolling(@config.polling)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
