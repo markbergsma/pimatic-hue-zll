@@ -341,6 +341,7 @@ module.exports = (env) ->
   class BaseHueScenes extends BaseHueDevice
 
     constructor: (@device, @hueApi) ->
+
       super(@device, @hueApi)
       @scenesByName = {}
       @scenesPromise = null
@@ -391,17 +392,18 @@ module.exports = (env) ->
     template: "huezllonoff"
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
+
       @id = @config.id
       @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
       @extendAttributesActions()
       super()
 
-      @hue = new @HueClass(this, hueApi, @config.hueId)
+      @hue = new @HueClass(this, @hueApi, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
 
       if @config.polling < 0
         # Enable global polling (for all lights or groups)
-        @lightStateInitialized = @HueClass.setupGlobalPolling(@_pluginConfig.polling, hueApi)
+        @lightStateInitialized = @HueClass.setupGlobalPolling(@_pluginConfig.polling, @hueApi)
       else
         @lightStateInitialized = @hue.setupPolling(@config.polling)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
@@ -724,12 +726,13 @@ module.exports = (env) ->
     _lastActivatedScene: null
 
     constructor: (@config, @hueApi, @_pluginConfig) ->
+  
       @id = @config.id
       @name = @config.name
       @extendAttributesActions()
       super()
 
-      @hue = new BaseHueScenes(this, hueApi)
+      @hue = new BaseHueScenes(this, @hueApi)
       @hue.requestScenes().then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
