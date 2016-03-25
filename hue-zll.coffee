@@ -368,7 +368,7 @@ module.exports = (env) ->
       @extendAttributesActions()
       super()
 
-      @hue = new @HueClass(this, @_pluginConfig, hueApi, @config.hueId)
+      @hue = new @HueClass(this, @_pluginConfig, @hueApi, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
 
       if @config.polling < 0
