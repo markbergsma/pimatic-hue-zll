@@ -430,8 +430,8 @@ module.exports = (env) ->
 
   class BaseHueScenes extends BaseHueDevice
 
-    constructor: (@device, @hueApi) ->
-      super(@device, @hueApi)
+    constructor: (@device, @pluginConfig, @hueApi) ->
+      super(@device, @pluginConfig, @hueApi)
       @scenesByName = {}
       @scenesPromise = null
 
@@ -819,7 +819,7 @@ module.exports = (env) ->
       @extendAttributesActions()
       super()
 
-      @hue = new BaseHueScenes(this, hueApi)
+      @hue = new BaseHueScenes(this, @_pluginConfig, @hueApi)
       @hue.requestScenes().then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
