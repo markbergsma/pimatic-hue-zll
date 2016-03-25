@@ -128,19 +128,27 @@ module.exports = (env) ->
         (error) => env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
 
-    @_apiError: (error) ->
-      env.logger.error "Hue API request failed:", error.message
-      env.logger.debug error.stack
-      Promise.reject error
+    @_apiStateChangeError: (error, repeatFunction, pollDescr) ->
+      switch error.code
+        when 'ECONNRESET'
+          delayTime = 0 # Put next request in the queue
+          error.message += " (connection reset)"
+        else
+          delayTime = null
+      env.logger.error "Error while changing #{pollDescr} state:", error.message
+      if delayTime?
+        env.logger.debug "Repeating Hue API request with #{delayTime}ms delay"
+        return Promise.delay(delayTime).then(repeatFunction)
 
     @_apiPollingError: (error, repeatFunction, pollDescr="") =>
-      delayTime = null
       switch error.code
         when 'ECONNRESET'
           delayTime = 0 # Put next request in the queue
           error.message += " (connection reset)"
         when 'ECONNREFUSED','EHOSTUNREACH','ENETUNREACH'
           delayTime = 30000 # Slow down trying again
+        else
+          delayTime = null
       env.logger.error "Error while polling #{pollDescr}:", error.message
       if delayTime?
         env.logger.debug "Repeating Hue API request with #{delayTime}ms delay"
@@ -173,6 +181,7 @@ module.exports = (env) ->
 
     constructor: (@device, @hueApi, @hueId) ->
       super(@device, @hueApi)
+      @pendingStateChange = null
       @lightStatusResult =
         state: {}
       @deviceStateCallback = null
@@ -256,17 +265,28 @@ module.exports = (env) ->
       @lightStatusResult.state
 
     prepareStateChange: ->
-      ls = hueapi.lightState.create()
-      ls.transition(@device.config.transitionTime) if @device.config.transitionTime?
-      return ls
+      @pendingStateChange = hueapi.lightState.create()
+      @pendingStateChange.transition(@device.config.transitionTime) if @device.config.transitionTime?
+      return @pendingStateChange
 
     getLightStatus: -> @lightStatusResult
 
     changeHueState: (hueStateChange) ->
       return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        env.logger.debug "Changing light #{@hueId} state:", JSON.stringify(hueStateChange.payload())
+        env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
         return @hueApi.setLightState(@hueId, hueStateChange).then(resolve, reject)
-      ).then(( => @_mergeStateChange hueStateChange), BaseHueDevice._apiError)
+      ).catch(
+        (error) =>
+          BaseHueDevice._apiStateChangeError(
+            error,
+            ( => @changeHueState hueStateChange ),
+            @devDescr
+          )
+      ).then(
+        (result) =>
+          @_mergeStateChange hueStateChange
+          @pendingStateChange = null
+      )
 
   class BaseHueLightGroup extends BaseHueLight
     devDescr: "group"
@@ -331,10 +351,22 @@ module.exports = (env) ->
       return super(result)
 
     changeHueState: (hueStateChange) ->
-      return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
-        env.logger.debug "Changing group #{@hueId} state:", JSON.stringify(hueStateChange.payload())
-        @hueApi.setGroupLightState(@hueId, hueStateChange).then(resolve, reject)
-      ).then(( => @_mergeStateChange hueStateChange), BaseHueDevice._apiError)
+      return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
+        env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
+        return @hueApi.setGroupLightState(@hueId, hueStateChange).then(resolve, reject)
+      ).catch(
+        (error) =>
+          BaseHueDevice._apiStateChangeError(
+            error,
+            ( => @changeHueState hueStateChange ),
+            @devDescr
+          )
+      ).then(
+        (result) =>
+          @_mergeStateChange hueStateChange
+          @pendingStateChange = null
+      )
+
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
