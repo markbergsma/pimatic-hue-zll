@@ -128,18 +128,6 @@ module.exports = (env) ->
         (error) => env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
 
-    @_apiStateChangeError: (error, repeatFunction, pollDescr) ->
-      switch error.code
-        when 'ECONNRESET'
-          delayTime = 0 # Put next request in the queue
-          error.message += " (connection reset)"
-        else
-          delayTime = null
-      env.logger.error "Error while changing #{pollDescr} state:", error.message
-      if delayTime?
-        env.logger.debug "Repeating Hue API request with #{delayTime}ms delay"
-        return Promise.delay(delayTime).then(repeatFunction)
-
     @_apiPollingError: (error, repeatFunction, pollDescr="") =>
       switch error.code
         when 'ECONNRESET'
@@ -274,22 +262,31 @@ module.exports = (env) ->
     _hueStateChangeFunction: -> @hueApi.setLightState
 
     changeHueState: (hueStateChange) ->
-      return BaseHueDevice.hueQ.pushRequest(
-        @_hueStateChangeFunction(),
-        @hueId,
-        hueStateChange
-      ).catch(
-        (error) =>
-          BaseHueDevice._apiStateChangeError(
-            error,
-            ( => @changeHueState hueStateChange ),
-            @devDescr
-          )
-      ).then(
-        (result) =>
-          env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
-          @_mergeStateChange hueStateChange
-          @pendingStateChange = null
+      retryHueStateChange = (remainingAttempts) =>
+        return BaseHueDevice.hueQ.pushRequest(
+          @_hueStateChangeFunction(), @hueId, hueStateChange
+        ).catch(
+          (error) =>
+            remainingAttempts--
+            switch error.code
+              when 'ECONNRESET'
+                repeat = yes
+                error.message += " (connection reset)"
+              else
+                repeat = no
+            env.logger.error "Error while changing #{@devDescr} state:", error.message
+            if repeat and remainingAttempts > 0
+              env.logger.debug "Repeating Hue API #{@devDescr} state change request for hue id #{@hueId}"
+              return retryHueStateChange(remainingAttempts)
+            else
+              return Promise.reject error
+        )
+
+      return retryHueStateChange(2).then( => # FIXME: make configurable
+        env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
+        @_mergeStateChange hueStateChange
+      ).finally( =>
+        @pendingStateChange = null  # Start with a clean state
       )
 
   class BaseHueLightGroup extends BaseHueLight
