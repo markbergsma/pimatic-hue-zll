@@ -142,7 +142,7 @@ module.exports = (env) ->
         env.logger.debug "Repeating Hue API request with #{delayTime}ms delay"
         return Promise.delay(delayTime).then(repeatFunction)
 
-    constructor: (@device, @hueApi) ->
+    constructor: (@device, @pluginConfig, @hueApi) ->
       BaseHueDevice.hueQ.maxLength++
 
   class BaseHueLight extends BaseHueDevice
@@ -167,8 +167,8 @@ module.exports = (env) ->
         if Array.isArray(BaseHueLight.statusCallbacks[light.id])
           cb(light) for cb in BaseHueLight.statusCallbacks[light.id]
 
-    constructor: (@device, @hueApi, @hueId) ->
-      super(@device, @hueApi)
+    constructor: (@device, @pluginConfig, @hueApi, @hueId) ->
+      super(@device, @pluginConfig, @hueApi)
       @pendingStateChange = null
       @lightStatusResult =
         state: {}
@@ -262,12 +262,11 @@ module.exports = (env) ->
     _hueStateChangeFunction: -> @hueApi.setLightState
 
     changeHueState: (hueStateChange) ->
-      retryHueStateChange = (remainingAttempts) =>
+      retryHueStateChange = (remainingRetries) =>
         return BaseHueDevice.hueQ.pushRequest(
           @_hueStateChangeFunction(), @hueId, hueStateChange
         ).catch(
           (error) =>
-            remainingAttempts--
             switch error.code
               when 'ECONNRESET'
                 repeat = yes
@@ -275,14 +274,16 @@ module.exports = (env) ->
               else
                 repeat = no
             env.logger.error "Error while changing #{@devDescr} state:", error.message
-            if repeat and remainingAttempts > 0
-              env.logger.debug "Repeating Hue API #{@devDescr} state change request for hue id #{@hueId}"
-              return retryHueStateChange(remainingAttempts)
+            if repeat and remainingRetries > 0
+              env.logger.debug """
+              Retrying (#{remainingRetries} more) Hue API #{@devDescr} state change request for hue id #{@hueId}
+              """
+              return retryHueStateChange(remainingRetries - 1)
             else
               return Promise.reject error
         )
 
-      return retryHueStateChange(2).then( => # FIXME: make configurable
+      return retryHueStateChange(@pluginConfig.retries).then( =>
         env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
         @_mergeStateChange hueStateChange
       ).finally( =>
@@ -367,7 +368,7 @@ module.exports = (env) ->
       @extendAttributesActions()
       super()
 
-      @hue = new @HueClass(this, hueApi, @config.hueId)
+      @hue = new @HueClass(this, @_pluginConfig, hueApi, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
 
       if @config.polling < 0

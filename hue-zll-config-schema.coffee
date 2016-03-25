@@ -17,6 +17,10 @@ module.exports = {
       description: "Timeout (ms) for sending API requests to the Hue bridge"
       type: "integer"
       default: 5000
+    retries:
+      description: "Number of retries for Hue API requests on temporary errors"
+      type: "integer"
+      default: 1
     polling:
       description: "Default polling interval (ms)"
       type: "integer"
