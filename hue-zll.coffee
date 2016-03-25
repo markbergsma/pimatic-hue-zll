@@ -271,10 +271,13 @@ module.exports = (env) ->
 
     getLightStatus: -> @lightStatusResult
 
+    _hueStateChangeFunction: -> @hueApi.setLightState
+
     changeHueState: (hueStateChange) ->
-      return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
-        return @hueApi.setLightState(@hueId, hueStateChange).then(resolve, reject)
+      return BaseHueDevice.hueQ.pushRequest(
+        @_hueStateChangeFunction(),
+        @hueId,
+        hueStateChange
       ).catch(
         (error) =>
           BaseHueDevice._apiStateChangeError(
@@ -284,6 +287,7 @@ module.exports = (env) ->
           )
       ).then(
         (result) =>
+          env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
           @_mergeStateChange hueStateChange
           @pendingStateChange = null
       )
@@ -350,22 +354,7 @@ module.exports = (env) ->
       delete result.action if result.action?
       return super(result)
 
-    changeHueState: (hueStateChange) ->
-      return BaseHueDevice.hueQ.pushTask( (resolve, reject) =>
-        env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
-        return @hueApi.setGroupLightState(@hueId, hueStateChange).then(resolve, reject)
-      ).catch(
-        (error) =>
-          BaseHueDevice._apiStateChangeError(
-            error,
-            ( => @changeHueState hueStateChange ),
-            @devDescr
-          )
-      ).then(
-        (result) =>
-          @_mergeStateChange hueStateChange
-          @pendingStateChange = null
-      )
+    _hueStateChangeFunction: -> @hueApi.setGroupLightState
 
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
