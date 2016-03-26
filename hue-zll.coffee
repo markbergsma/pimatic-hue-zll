@@ -102,7 +102,8 @@ module.exports = (env) ->
         HueZLLColorLight,
         HueZLLColorLightGroup,
         HueZLLExtendedColorLight,
-        HueZLLExtendedColorLightGroup
+        HueZLLExtendedColorLightGroup,
+        HueZLLScenes
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -116,6 +117,7 @@ module.exports = (env) ->
       @framework.ruleManager.addActionProvider(new actions.HueZLLDimmerActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.CtActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
+      @framework.ruleManager.addActionProvider(new actions.ActivateHueSceneActionProvider(@framework))
 
       @framework.on "after init", =>
         # Check if the mobile-frontent was loaded and get a instance
@@ -425,6 +427,51 @@ module.exports = (env) ->
 
     _hueStateChangeFunction: -> @hueApi.setGroupLightState
 
+
+  class BaseHueScenes extends BaseHueDevice
+
+    constructor: (@device, @hueApi) ->
+      super(@device, @hueApi)
+      @scenesByName = {}
+      @scenesPromise = null
+
+    requestScenes: ->
+      return @scenesPromise = BaseHueDevice.hueQ.pushRequest(
+        @hueApi.scenes
+      ).then(
+        @_scenesReceived
+      ).catch(
+        @_apiError
+      )
+
+    _scenesReceived: (result) =>
+      nameRegex = /^(.+) (on|off) (\d+)$/
+      for scene in result
+        try
+          tokens = scene.name.match(nameRegex)
+          if tokens?
+            scene.uniquename = tokens[1]
+            lcname = scene.uniquename.toLowerCase()
+            @scenesByName[lcname] = scene
+          else
+            scene.uniquename = scene.name
+            @scenesByName[scene.name.toLowerCase()] = scene
+        catch error
+          env.logger.error error.message
+
+    _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName.toLowerCase()] )
+
+    activateSceneByName: (sceneName, groupId=null) ->
+      return @_lookupSceneByName(sceneName).then( (scene) =>
+        if scene? and scene.id?
+          return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
+            env.logger.debug "Activating Hue scene id: #{scene.id} name: \"#{sceneName}\"" + \
+              if groupId? then " group: #{groupId}" else ""
+            @hueApi.activateScene(scene.id, groupId).then(resolve, reject)
+          )
+        else
+          return Promise.reject(Error("Scene with name #{sceneName} not found"))
+      )
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: BaseHueLight
@@ -762,5 +809,51 @@ module.exports = (env) ->
   
   extend HueZLLExtendedColorLightGroup.prototype, ColorTempMixin
   extend HueZLLExtendedColorLightGroup.prototype, ColormodeMixin
+
+  class HueZLLScenes extends env.devices.Device
+    _lastActivatedScene: null
+
+    constructor: (@config, @hueApi, @_pluginConfig) ->
+      @id = @config.id
+      @name = @config.name
+      @extendAttributesActions()
+      super()
+
+      @hue = new BaseHueScenes(this, hueApi)
+      @hue.requestScenes().then( =>
+        env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
+          ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
+      )
+
+    extendAttributesActions: () =>
+      @attributes = extend (extend {}, @attributes),
+        lastActivatedScene:
+          description: "Hue scene last activated by Pimatic"
+          type: t.string
+
+      @actions = extend (extend {}, @actions),
+        activateScene:
+          description: "activates a Hue scene"
+          params:
+            sceneName:
+              type: t.string
+            groupId:
+              type: t.number
+
+    activateScene: (sceneName, groupId=null) =>
+      return @hue.activateSceneByName(sceneName, groupId).then( =>
+        @_setLastActivatedScene sceneName
+      )
+
+    _setLastActivatedScene: (sceneName) ->
+      assert sceneName.length > 0
+      unless @_lastActivatedScene is sceneName
+        @_lastActivatedScene = sceneName
+        @emit "lastActivatedScene", sceneName
+
+    getLastActivatedScene: -> Promise.resolve @_lastActivatedScene
+
+    getKnownSceneNames: => (scene.uniquename for key, scene of @hue.scenesByName)
+
 
   return new HueZLLPlugin()

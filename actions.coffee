@@ -274,9 +274,63 @@ module.exports = (env) ->
       else
         return f(hueValue, satValue).then( => msg )
 
+  class ActivateHueSceneActionProvider extends env.actions.ActionProvider
+    constructor: (@framework) ->
+
+    parseAction: (input, context) ->
+      hueScenesDevices = (device for own id, device of @framework.deviceManager.devices \
+                         when device.hasAction("activateScene"))
+      hueLightGroupDevices = (device for own id, device of @framework.deviceManager.devices \
+                             when device.constructor.name.match(/^HueZLL.+LightGroup$/))
+      return if hueScenesDevices.length is 0
+
+      # For Hue scenes, at the moment we just need one (arbitrary) HueZLLScenes device
+      device = hueScenesDevices[0]
+
+      # See if we have a list of sceneNames ready
+      sceneNames = (('"'+name+'"' for name in device.getKnownSceneNames())) or []
+
+      sceneExpr = null
+      hueGroupDevice = null
+      match = M(input, context)
+        .match("activate hue scene ")
+        .or([
+          ( (next) =>
+            next.match(sceneNames, (m, tokens) => sceneExpr = tokens )
+          ),
+          ( (next) =>
+            next.matchStringWithVars( (m, tokens) => sceneExpr = tokens )
+          )
+        ]).optional( (next) =>
+          next.match([" on group ", " limited to group "])
+            .matchDevice(hueLightGroupDevices, (next, d) => hueGroupDevice = d )
+        )
+
+      if match?.hadMatch() and sceneExpr? and device?
+        return {
+          token: match.getFullMatch()
+          nextInput: input.substring(match.getFullMatch().length)
+          actionHandler: new ActivateHueSceneActionHandler(@framework, device, sceneExpr, hueGroupDevice)
+        }
+      else
+        return null
+
+  class ActivateHueSceneActionHandler extends env.actions.ActionHandler
+    constructor: (@framework, @device, @sceneExpr, @hueGroup=null) ->
+
+    executeAction: (simulate, context) ->
+      return @framework.variableManager.evaluateStringExpression(@sceneExpr).then( (sceneName) =>
+        msg = "activated Hue scene #{sceneName}"
+        msg += " on group #{@hueGroup.id}" if @hueGroup?
+        if simulate
+          return "would have #{msg}"
+        else
+          return @device.activateScene(sceneName, @hueGroup?.hue.hueId).then( => msg )
+      )
 
   return exports = {
     HueZLLDimmerActionProvider,
     CtActionProvider,
-    HueSatActionProvider
+    HueSatActionProvider,
+    ActivateHueSceneActionProvider
   }
