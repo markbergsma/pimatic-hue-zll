@@ -46,6 +46,28 @@ module.exports = (env) ->
           )
       )
 
+    retryRequest: (request, args=[], retryOptions={}) ->
+      retries = retryOptions.retries or @defaultRetries
+      errorFunction = retryOptions.errorFunction or (
+        (error, number, retries, retryFunction) =>
+          error.message = "Error during Hue API request (attempt #{number}): " + error.message
+          if retries - number + 1 > 0
+            env.logger.debug error.message
+            env.logger.debug "Retrying (#{retries - number + 1} more) Hue API request"
+          retryFunction(error)
+      )
+
+      return promiseRetry(
+        ( (retryFunction, number) =>
+          @pushRequest(
+            request, args...
+          ).catch( (error) =>
+            errorFunction error, number, retries, retryFunction
+          )
+        ),
+        retries: retries
+      )
+
   # Convert ES6 Promise to Bluebird
   promiseRetry = (args...) => Promise.resolve es6PromiseRetry args...
 
@@ -61,6 +83,7 @@ module.exports = (env) ->
 
       BaseHueDevice.hueQ.concurrency = @config.hueApiConcurrency
       BaseHueDevice.hueQ.timeout = @config.timeout
+      BaseHueDevice.hueQ.defaultRetries = @config.retries
       BaseHueDevice.hueQ.bindObject = @hueApi
 
       BaseHueDevice.bridgeVersion(@hueApi)
@@ -122,14 +145,15 @@ module.exports = (env) ->
     })
 
     @bridgeVersion: (hueApi) ->
-      BaseHueDevice.hueQ.pushRequest(
-        hueApi.version
-      ).then(
-        (version) =>
-          env.logger.info "Connected to bridge #{version['name']}, " +
-            "API version #{version['version']['api']}, software #{version['version']['software']}"
-      ).catch(
-        (error) => env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
+      BaseHueDevice.hueQ.retryRequest(
+        hueApi.version,
+        [],
+        retries: 2
+      ).then( (version) =>
+        env.logger.info "Connected to bridge #{version['name']}, " +
+          "API version #{version['version']['api']}, software #{version['version']['software']}"
+      ).catch( (error) =>
+        env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
 
     @_apiPollingError: (error, number, retries, retryFunction, pollDescr) =>
@@ -156,12 +180,12 @@ module.exports = (env) ->
     # Static methods for polling all lights
 
     @inventory: (hueApi) ->
-      BaseHueDevice.hueQ.pushRequest(
+      BaseHueDevice.hueQ.retryRequest(
         hueApi.lights
-      ).then(
-        (result) => env.logger.debug result
-      ).catch(
-        (error) => env.logger.error "Error while retrieving inventory of all lights:", error.message
+      ).then( (result) =>
+        env.logger.debug result
+      ).catch( (error) =>
+        env.logger.error "Error while retrieving inventory of all lights:", error.message
       )
 
     @allLightsReceived: (lightsResult) ->
@@ -324,12 +348,12 @@ module.exports = (env) ->
     # Static methods for polling all lights
 
     @inventory: (hueApi) ->
-      BaseHueDevice.hueQ.pushRequest(
+      BaseHueDevice.hueQ.retryRequest(
         hueApi.groups
-      ).then(
-        (result) => env.logger.debug result
-      ).catch(
-        (error) => env.logger.error "Error while retrieving inventory of all light groups:", error.message
+      ).then( (result) =>
+        env.logger.debug result
+      ).catch( (error) =>
+        env.logger.error "Error while retrieving inventory of all light groups:", error.message
       )
 
     @allGroupsReceived: (groupsResult) ->
