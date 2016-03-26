@@ -229,13 +229,26 @@ module.exports = (env) ->
         env.logger.error error.message
       )
 
-    poll: ->
-      return BaseHueDevice.hueQ.pushRequest(
-        @hueApi.lightStatus, @hueId
+    poll: (retries=@pluginConfig.retries) =>
+      return promiseRetry(
+        ( (retryFunction, number) =>
+          BaseHueDevice.hueQ.pushRequest(
+            @hueApi.lightStatus, @hueId
+          ).catch( (error) =>
+            BaseHueDevice._apiPollingError(
+              error,
+              number,
+              retries - number + 1,
+              retryFunction,
+              "light #{@hueId}"
+            )
+          )
+        ),
+        retries: retries
       ).then(
-        @_statusReceived)
-      .catch(
-        (error) => env.logger.error "Error while polling light #{@hueId} status:", error.message
+        @_statusReceived
+      ).catch( (error) =>
+        env.logger.error "Error while polling light #{@hueId} status:", error.message
       )
 
     _diffState: (newRState) ->
@@ -357,13 +370,26 @@ module.exports = (env) ->
         env.logger.error error.message
       )
 
-    poll: ->
-      return BaseHueLightGroup.hueQ.pushRequest(
-        @hueApi.getGroup, @hueId
+    poll: (retries=@pluginConfig.retries) =>
+      return promiseRetry(
+        ( (retryFunction, number) =>
+          BaseHueDevice.hueQ.pushRequest(
+            @hueApi.getGroup, @hueId
+          ).catch( (error) =>
+            BaseHueDevice._apiPollingError(
+              error,
+              number,
+              retries - number + 1,
+              retryFunction,
+              "group #{@hueId}"
+            )
+          )
+        ),
+        retries: retries
       ).then(
         @_statusReceived
-      ).catch(
-        (error) => env.logger.error "Error while polling light group #{@hueId} status:", error.message
+      ).catch( (error) =>
+        env.logger.error "Error while polling light group #{@hueId} status:", error.message
       )
 
     _statusReceived: (result) =>
