@@ -15,6 +15,7 @@ module.exports = (env) ->
   hueapi = require 'node-hue-api'
 
   Queue = require 'simple-promise-queue'
+  es6PromiseRetry = require 'promise-retry'
 
   # helper function to mix in key/value pairs from another object
   extend = (obj, mixin) ->
@@ -44,6 +45,9 @@ module.exports = (env) ->
               resolve result
           )
       )
+
+  # Convert ES6 Promise to Bluebird
+  promiseRetry = (args...) => Promise.resolve es6PromiseRetry args...
 
   class HueZLLPlugin extends env.plugins.Plugin
 
@@ -128,28 +132,17 @@ module.exports = (env) ->
         (error) => env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
 
-    @_apiPollingError: (error, retries, retryFunction, pollDescr) =>
-      error.message = "Error while polling #{pollDescr}: " + error.message
+    @_apiPollingError: (error, number, retries, retryFunction, pollDescr) =>
+      error.message = "Error while polling #{pollDescr} (attempt #{number}): " + error.message
       switch error.code
         when 'ECONNRESET'
-          delayTime = if retries > 0 then 0 else 30000  # While retrying be quick, but don't hammer otherwise
-          reportError = false
           error.message += " (connection reset)"
-        when 'ECONNREFUSED','EHOSTUNREACH','ENETUNREACH'
-          delayTime = 30000 # Slow down trying again
-          reportError = true
-        else
-          delayTime = null
-          reportError = true
-      if reportError or retries is 0
-        env.logger.error error.message
-      else
+      if retries > 0
         env.logger.debug error.message
-      if delayTime? and retries > 0
-        env.logger.debug "Retrying (#{retries} more) Hue API poll #{pollDescr} request with #{delayTime}ms delay"
-        return Promise.delay(delayTime).then(retryFunction)
-      error.delay = delayTime # Advisory
-      return Promise.reject error
+        env.logger.debug "Retrying (#{retries} more) Hue API poll #{pollDescr} request"
+        retryFunction(error)  # Throws an error
+      else
+        return Promise.reject error
 
     constructor: (@device, @pluginConfig, @hueApi) ->
       BaseHueDevice.hueQ.maxLength++
@@ -194,18 +187,15 @@ module.exports = (env) ->
         @constructor.statusCallbacks[hueId] = Array(callback)
 
     setupGlobalPolling: (interval) ->
-      repeatPoll = (firstAttempt) =>
-        firstPoll = @pollAllLights(if firstAttempt then @pluginConfig.retries * 10 else @pluginConfig.retries)
-        firstPoll.then(
-          ( (result) => Promise.delay(interval) ),
-          ( (error) => Promise.delay(error.delay) if error.delay? ),
-        ).finally( =>
-          repeatPoll(no)
+      repeatPoll = () =>
+        firstPoll = @pollAllLights(@pluginConfig.retries * 10)
+        firstPoll.delay(interval).finally( =>
+          repeatPoll()
           return null
         )
         return firstPoll
       return BaseHueLight.globalPolling or
-        BaseHueLight.globalPolling = repeatPoll(yes)
+        BaseHueLight.globalPolling = repeatPoll()
 
     setupPolling: (interval) =>
       repeatPoll = () =>
@@ -218,17 +208,25 @@ module.exports = (env) ->
       return if interval > 0 then repeatPoll() else @poll()
 
     pollAllLights: (retries=@pluginConfig.retries) =>
-      BaseHueDevice.hueQ.pushRequest(
-        @hueApi.lights
+      return promiseRetry(
+        ( (retryFunction, number) =>
+          BaseHueDevice.hueQ.pushRequest(
+            @hueApi.lights
+          ).catch( (error) =>
+            BaseHueDevice._apiPollingError(
+              error,
+              number,
+              retries - number + 1,
+              retryFunction,
+              "all lights"
+            )
+          )
+        ),
+        retries: retries
       ).then(
         BaseHueLight.allLightsReceived
-      ).catch(
-        (error) => BaseHueDevice._apiPollingError(
-            error,
-            retries,
-            ( => @pollAllLights(retries - 1) ),
-            "all lights"
-          )
+      ).catch( (error) =>
+        env.logger.error error.message
       )
 
     poll: ->
@@ -327,31 +325,36 @@ module.exports = (env) ->
           cb(group) for cb in BaseHueLightGroup.statusCallbacks[group.id]
 
     setupGlobalPolling: (interval) ->
-      repeatPoll = (firstAttempt) =>
-        firstPoll = @pollAllGroups(if firstAttempt then @pluginConfig.retries * 10 else @pluginConfig.retries)
-        firstPoll.then(
-          ( (result) => Promise.delay(interval) ),
-          ( (error) => Promise.delay(error.delay) if error.delay? ),
-        ).finally( =>
-          repeatPoll(no)
+      repeatPoll = () =>
+        firstPoll = @pollAllGroups(@pluginConfig.retries * 10)
+        firstPoll.delay(interval).finally( =>
+          repeatPoll()
           return null
         )
         return firstPoll
       return BaseHueLightGroup.globalPolling or
-        BaseHueLightGroup.globalPolling = repeatPoll(yes)
+        BaseHueLightGroup.globalPolling = repeatPoll()
 
     pollAllGroups: (retries=@pluginConfig.retries) =>
-      BaseHueDevice.hueQ.pushRequest(
-        @hueApi.groups
+      return promiseRetry(
+        ( (retryFunction, number) =>
+          BaseHueDevice.hueQ.pushRequest(
+            @hueApi.groups
+          ).catch( (error) =>
+            BaseHueDevice._apiPollingError(
+              error,
+              number,
+              retries - number + 1,
+              retryFunction,
+              "all light groups"
+            )
+          )
+        ),
+        retries: retries
       ).then(
         BaseHueLightGroup.allGroupsReceived
-      ).catch(
-        (error) => BaseHueDevice._apiPollingError(
-            error,
-            retries
-            ( => @pollAllGroups(retries - 1) ),
-            "all light groups"
-          )
+      ).catch( (error) =>
+        env.logger.error error.message
       )
 
     poll: ->
