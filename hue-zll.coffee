@@ -129,17 +129,24 @@ module.exports = (env) ->
       )
 
     @_apiPollingError: (error, repeatFunction, pollDescr="") =>
+      error.message = "Error while polling #{pollDescr}: " + error.message
       switch error.code
         when 'ECONNRESET'
           delayTime = 0 # Put next request in the queue
+          reportError = false
           error.message += " (connection reset)"
         when 'ECONNREFUSED','EHOSTUNREACH','ENETUNREACH'
           delayTime = 30000 # Slow down trying again
+          reportError = true
         else
           delayTime = null
-      env.logger.error "Error while polling #{pollDescr}:", error.message
+          reportError = true
+      if reportError
+        env.logger.error error.message
+      else
+        env.logger.debug error.message
       if delayTime?
-        env.logger.debug "Repeating Hue API request with #{delayTime}ms delay"
+        env.logger.debug "Repeating Hue API poll request with #{delayTime}ms delay"
         return Promise.delay(delayTime).then(repeatFunction)
 
     constructor: (@device, @pluginConfig, @hueApi) ->
@@ -273,8 +280,9 @@ module.exports = (env) ->
                 error.message += " (connection reset)"
               else
                 repeat = no
-            env.logger.error "Error while changing #{@devDescr} state:", error.message
+            error.message = "Error while changing #{@devDescr} state: " + error.message
             if repeat and remainingRetries > 0
+              env.logger.debug error.message
               env.logger.debug """
               Retrying (#{remainingRetries} more) Hue API #{@devDescr} state change request for hue id #{@hueId}
               """
