@@ -186,9 +186,9 @@ module.exports = (env) ->
       else
         @constructor.statusCallbacks[hueId] = Array(callback)
 
-    setupGlobalPolling: (interval) ->
+    setupGlobalPolling: (interval, retries) ->
       repeatPoll = () =>
-        firstPoll = @pollAllLights(@pluginConfig.retries * 10)
+        firstPoll = @pollAllLights(retries)
         firstPoll.delay(interval).finally( =>
           repeatPoll()
           return null
@@ -197,15 +197,15 @@ module.exports = (env) ->
       return BaseHueLight.globalPolling or
         BaseHueLight.globalPolling = repeatPoll()
 
-    setupPolling: (interval) =>
+    setupPolling: (interval, retries) =>
       repeatPoll = () =>
-        firstPoll = @poll()
+        firstPoll = @poll(retries)
         firstPoll.delay(interval).finally( =>
             repeatPoll()
             return null
           )
         return firstPoll
-      return if interval > 0 then repeatPoll() else @poll()
+      return if interval > 0 then repeatPoll() else @poll(retries)
 
     pollAllLights: (retries=@pluginConfig.retries) =>
       return promiseRetry(
@@ -337,9 +337,9 @@ module.exports = (env) ->
         if Array.isArray(BaseHueLightGroup.statusCallbacks[group.id])
           cb(group) for cb in BaseHueLightGroup.statusCallbacks[group.id]
 
-    setupGlobalPolling: (interval) ->
+    setupGlobalPolling: (interval, retries) ->
       repeatPoll = () =>
-        firstPoll = @pollAllGroups(@pluginConfig.retries * 10)
+        firstPoll = @pollAllGroups(retries)
         firstPoll.delay(interval).finally( =>
           repeatPoll()
           return null
@@ -420,9 +420,9 @@ module.exports = (env) ->
 
       if @config.polling < 0
         # Enable global polling (for all lights or groups)
-        @lightStateInitialized = @hue.setupGlobalPolling(@_pluginConfig.polling)
+        @lightStateInitialized = @hue.setupGlobalPolling(@_pluginConfig.polling, @_pluginConfig.retries * 8)
       else
-        @lightStateInitialized = @hue.setupPolling(@config.polling)
+        @lightStateInitialized = @hue.setupPolling(@config.polling, @_pluginConfig.retries * 8)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
 
     extendAttributesActions: () =>
