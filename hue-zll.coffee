@@ -436,12 +436,10 @@ module.exports = (env) ->
       @scenesPromise = null
 
     requestScenes: ->
-      return @scenesPromise = BaseHueDevice.hueQ.pushRequest(
+      return @scenesPromise = BaseHueDevice.hueQ.retryRequest(
         @hueApi.scenes
       ).then(
         @_scenesReceived
-      ).catch(
-        @_apiError
       )
 
     _scenesReceived: (result) =>
@@ -464,10 +462,11 @@ module.exports = (env) ->
     activateSceneByName: (sceneName, groupId=null) ->
       return @_lookupSceneByName(sceneName).then( (scene) =>
         if scene? and scene.id?
-          return BaseHueLightGroup.hueQ.pushTask( (resolve, reject) =>
+          return BaseHueLightGroup.hueQ.retryRequest(
+            @hueApi.activateScene, [scene.id, groupId]
+          ).then( =>
             env.logger.debug "Activating Hue scene id: #{scene.id} name: \"#{sceneName}\"" + \
               if groupId? then " group: #{groupId}" else ""
-            @hueApi.activateScene(scene.id, groupId).then(resolve, reject)
           )
         else
           return Promise.reject(Error("Scene with name #{sceneName} not found"))
