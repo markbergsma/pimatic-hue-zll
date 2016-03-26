@@ -523,7 +523,7 @@ module.exports = (env) ->
 
     _lightStateReceived: (rstate) =>
       super(rstate)
-      @_setDimlevel rstate.bri / 254 * 100
+      @_setDimlevel Math.round(rstate.bri / 254 * 100)
       return rstate
 
     changeDimlevelTo: (state, transitionTime=null) ->
