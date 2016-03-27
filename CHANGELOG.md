@@ -1,3 +1,11 @@
+### (master)
+* Implement basic support for Hue scene activation with the HueZLLScenes device and "activate hue scene" rule action
+* Add optional "transition time" parameter to light state change rule actions as well as the REST API, to control the speed/duration of the change
+* Many changes under the hood w.r.t. Hue API error handling: most actions are retried a configurable amount of times on failure and transient errors are hidden
+* Restore the full original light state after "... for X time" rule actions
+* Fix method invocations on undefined elements in the UI
+* Fix scoping bug in color temperature action
+
 ### 0.1.1
 * Fix ``set ct of`` rules with the ``for X <time>`` suffix
 * Add CSS rules for better layout on small screen/mobile devices (thanks to Wiebe Nieuwenhuis)
