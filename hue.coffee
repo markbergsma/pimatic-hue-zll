@@ -328,7 +328,7 @@ module.exports = (env) ->
     requestScenes: ->
       return @scenesPromise = BaseHueDevice.hueQ.retryRequest(
         @hueApi.scenes, [],
-        "scenes"
+        descr: "scenes"
       ).then(
         @_scenesReceived
       )
@@ -351,7 +351,8 @@ module.exports = (env) ->
       return @_lookupSceneByName(sceneName).then( (scene) =>
         if scene? and scene.id?
           return BaseHueLightGroup.hueQ.retryRequest(
-            @hueApi.activateScene, [scene.id, groupId]
+            @hueApi.activateScene, [scene.id, groupId],
+            descr: "scene activation"
           ).then( =>
             env.logger.debug "Activating Hue scene id: #{scene.id} name: \"#{sceneName}\"" + \
               if groupId? then " group: #{groupId}" else ""
