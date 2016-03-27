@@ -21,6 +21,7 @@ module.exports = (env) ->
 
     @defaultErrorFunction: (error, number, retries, retryFunction, descr) =>
       error.message = "Error during #{descr} Hue API request (attempt #{number}/#{retries+1}): " + error.message
+      if not error.code? then throw error # Only retry for system errors
       switch error.code
         when 'ECONNRESET'
           error.message += " (connection reset)"
