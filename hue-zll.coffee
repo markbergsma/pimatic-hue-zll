@@ -22,6 +22,8 @@ module.exports = (env) ->
     obj[key] = value for key, value of mixin
     obj
 
+  Queue.setPromise(Promise)
+
   class HueQueue extends Queue
     constructor: (options) ->
       super(options)
@@ -30,8 +32,7 @@ module.exports = (env) ->
 
     pushTask: (promiseFunction) ->
       if @length < @maxLength
-        # Convert ES6 Promise to Bluebird
-        return Promise.resolve super(promiseFunction)
+        return super(promiseFunction)
       else
         return Promise.reject Error("Hue API maximum queue length (#{@maxLength}) exceeded")
 
