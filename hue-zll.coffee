@@ -393,13 +393,10 @@ module.exports = (env) ->
       for scene in result
         try
           tokens = scene.name.match(nameRegex)
-          if tokens?
-            scene.uniquename = tokens[1]
-            lcname = scene.uniquename.toLowerCase()
-            @scenesByName[lcname] = scene
-          else
-            scene.uniquename = scene.name
-            @scenesByName[scene.name.toLowerCase()] = scene
+          scene.uniquename = if tokens? then tokens[1] else scene.name
+          scene.lastupdatedts = Date.parse(scene.lastupdated) or 0
+          lcname = scene.uniquename.toLowerCase()
+          @scenesByName[lcname] = scene unless scene.lastupdatedts < @scenesByName[lcname]?.lastupdatedts
         catch error
           env.logger.error error.message
 
