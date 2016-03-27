@@ -25,6 +25,16 @@ module.exports = (env) ->
   Queue.setPromise(Promise)
 
   class HueQueue extends Queue
+
+    @defaultErrorFunction: (error, number, retries, retryFunction, descr) =>
+      error.message = "Error during #{descr} Hue API request (attempt #{number}/#{retries+1}): " + error.message
+      switch error.code
+        when 'ECONNRESET'
+          error.message += " (connection reset)"
+      if number < retries + 1
+        env.logger.debug error.message
+      retryFunction(error)  # Throws an error
+
     constructor: (options) ->
       super(options)
       @maxLength = options.maxLength or Infinity
@@ -49,21 +59,16 @@ module.exports = (env) ->
 
     retryRequest: (request, args=[], retryOptions={}) ->
       retries = retryOptions.retries or @defaultRetries
-      errorFunction = retryOptions.errorFunction or (
-        (error, number, retries, retryFunction) =>
-          error.message = "Error during Hue API request (attempt #{number}): " + error.message
-          if retries - number + 1 > 0
-            env.logger.debug error.message
-            env.logger.debug "Retrying (#{retries - number + 1} more) Hue API request"
-          retryFunction(error)
-      )
+      errorFunction = retryOptions.errorFunction or HueQueue.defaultErrorFunction
+      descr = retryOptions.descr or "a"
+      assert errorFunction instanceof Function
 
       return promiseRetry(
         ( (retryFunction, number) =>
           @pushRequest(
             request, args...
           ).catch( (error) =>
-            errorFunction error, number, retries, retryFunction
+            errorFunction error, number, retries, retryFunction, descr
           )
         ),
         retries: retries
@@ -159,18 +164,6 @@ module.exports = (env) ->
         env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
 
-    @_apiPollingError: (error, number, retries, retryFunction, pollDescr) =>
-      error.message = "Error while polling #{pollDescr} (attempt #{number}): " + error.message
-      switch error.code
-        when 'ECONNRESET'
-          error.message += " (connection reset)"
-      if retries > 0
-        env.logger.debug error.message
-        env.logger.debug "Retrying (#{retries} more) Hue API poll #{pollDescr} request"
-        retryFunction(error)  # Throws an error
-      else
-        return Promise.reject error
-
     constructor: (@device, @pluginConfig, @hueApi) ->
       BaseHueDevice.hueQ.maxLength++
 
@@ -235,21 +228,9 @@ module.exports = (env) ->
       return if interval > 0 then repeatPoll() else @poll(retries)
 
     pollAllLights: (retries=@pluginConfig.retries) =>
-      return promiseRetry(
-        ( (retryFunction, number) =>
-          BaseHueDevice.hueQ.pushRequest(
-            @hueApi.lights
-          ).catch( (error) =>
-            BaseHueDevice._apiPollingError(
-              error,
-              number,
-              retries - number + 1,
-              retryFunction,
-              "all lights"
-            )
-          )
-        ),
-        retries: retries
+      return BaseHueDevice.hueQ.retryRequest(@hueApi.lights, [],
+        retries: retries,
+        descr: "poll of all lights"
       ).then(
         BaseHueLight.allLightsReceived
       ).catch( (error) =>
@@ -257,21 +238,9 @@ module.exports = (env) ->
       )
 
     poll: (retries=@pluginConfig.retries) =>
-      return promiseRetry(
-        ( (retryFunction, number) =>
-          BaseHueDevice.hueQ.pushRequest(
-            @hueApi.lightStatus, @hueId
-          ).catch( (error) =>
-            BaseHueDevice._apiPollingError(
-              error,
-              number,
-              retries - number + 1,
-              retryFunction,
-              "light #{@hueId}"
-            )
-          )
-        ),
-        retries: retries
+      return BaseHueDevice.hueQ.retryRequest(@hueApi.lightStatus, [@hueId],
+        retries: retries,
+        descr: "poll of light #{@hueId}"
       ).then(
         @_statusReceived
       ).catch( (error) =>
@@ -376,21 +345,9 @@ module.exports = (env) ->
         BaseHueLightGroup.globalPolling = repeatPoll()
 
     pollAllGroups: (retries=@pluginConfig.retries) =>
-      return promiseRetry(
-        ( (retryFunction, number) =>
-          BaseHueDevice.hueQ.pushRequest(
-            @hueApi.groups
-          ).catch( (error) =>
-            BaseHueDevice._apiPollingError(
-              error,
-              number,
-              retries - number + 1,
-              retryFunction,
-              "all light groups"
-            )
-          )
-        ),
-        retries: retries
+      return BaseHueDevice.hueQ.retryRequest(@hueApi.groups, [],
+        retries: retries,
+        descr: "poll of all light groups"
       ).then(
         BaseHueLightGroup.allGroupsReceived
       ).catch( (error) =>
@@ -398,21 +355,9 @@ module.exports = (env) ->
       )
 
     poll: (retries=@pluginConfig.retries) =>
-      return promiseRetry(
-        ( (retryFunction, number) =>
-          BaseHueDevice.hueQ.pushRequest(
-            @hueApi.getGroup, @hueId
-          ).catch( (error) =>
-            BaseHueDevice._apiPollingError(
-              error,
-              number,
-              retries - number + 1,
-              retryFunction,
-              "group #{@hueId}"
-            )
-          )
-        ),
-        retries: retries
+      return BaseHueDevice.hueQ.retryRequest(@hueApi.getGroup, [@hueId],
+        retries: retries,
+        descr: "poll of group #{@hueId}"
       ).then(
         @_statusReceived
       ).catch( (error) =>
