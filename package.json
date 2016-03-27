@@ -5,6 +5,7 @@
   "main": "hue-zll",
   "files": [
     "hue-zll.coffee",
+    "hue.coffee",
     "hue-zll-config-schema.coffee",
     "device-config-schema.coffee",
     "actions.coffee",
