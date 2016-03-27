@@ -8,6 +8,10 @@ module.exports = (env) ->
   # Require the [cassert library](https://github.com/rhoot/cassert).
   assert = env.require 'cassert'
 
+  # node-hue-api needs es6-promise
+  es6Promise = require 'es6-promise'
+  hueapi = require 'node-hue-api'
+
   Queue = require 'simple-promise-queue'
   es6PromiseRetry = require 'promise-retry'
 
@@ -66,12 +70,25 @@ module.exports = (env) ->
   # Convert ES6 Promise to Bluebird
   promiseRetry = (args...) => Promise.resolve es6PromiseRetry args...
 
+  initHueApi = (config) ->
+    return new hueapi.HueApi(
+      config.host,
+      config.username,
+      config.timeout,
+      config.port
+    )
 
   class BaseHueDevice
     @hueQ: new HueQueue({
       maxLength: 4  # Incremented for each additional device
       autoStart: true
     })
+
+    @initHueQueue: (config, hueApi) ->
+      BaseHueDevice.hueQ.concurrency = config.hueApiConcurrency
+      BaseHueDevice.hueQ.timeout = config.timeout
+      BaseHueDevice.hueQ.defaultRetries = config.retries
+      BaseHueDevice.hueQ.bindObject = hueApi
 
     @bridgeVersion: (hueApi) ->
       BaseHueDevice.hueQ.retryRequest(
@@ -338,6 +355,7 @@ module.exports = (env) ->
 
 
   return exports = {
+    initHueApi,
     HueQueue,
     BaseHueDevice,
     BaseHueLight,

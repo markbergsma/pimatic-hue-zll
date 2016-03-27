@@ -10,10 +10,6 @@ module.exports = (env) ->
 
   t = env.require('decl-api').types
 
-  # node-hue-api needs es6-promise
-  es6Promise = require 'es6-promise'
-  hueapi = require 'node-hue-api'
-
   huebase = require('./hue') env
 
   # helper function to mix in key/value pairs from another object
@@ -24,17 +20,8 @@ module.exports = (env) ->
   class HueZLLPlugin extends env.plugins.Plugin
 
     init: (app, @framework, @config) =>
-      @hueApi = new hueapi.HueApi(
-        @config.host,
-        @config.username,
-        @config.timeout,
-        @config.port
-      )
-
-      huebase.BaseHueDevice.hueQ.concurrency = @config.hueApiConcurrency
-      huebase.BaseHueDevice.hueQ.timeout = @config.timeout
-      huebase.BaseHueDevice.hueQ.defaultRetries = @config.retries
-      huebase.BaseHueDevice.hueQ.bindObject = @hueApi
+      @hueApi = huebase.initHueApi(@config)
+      huebase.BaseHueDevice.initHueQueue(@config, @hueApi)
 
       huebase.BaseHueDevice.bridgeVersion(@hueApi)
       huebase.BaseHueLight.inventory(@hueApi)
