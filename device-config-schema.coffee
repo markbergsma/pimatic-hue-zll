@@ -183,6 +183,25 @@ module.exports = {
   HueZLLScenes: {
     title: "Hue scenes"
     type: "object"
-    properties: {}
+    properties:
+      buttons:
+        description: "Buttons for Hue scenes"
+        type: "array"
+        default: []
+        format: "table"
+        items:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+              description: "Unique id of the Hue scene"
+            text:
+              type: "string"
+              description: "The button label. The id will be used if not set."
+              required: false
+            confirm:
+              description: "Ask the user to confirm the button press"
+              type: "boolean"
+              default: false
   }
 }

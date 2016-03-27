@@ -357,6 +357,7 @@ module.exports = (env) ->
     constructor: (@device, @plugin) ->
       super(@device, @plugin)
       @scenesByName = {}
+      @scenesByNameId = {}
       @scenesPromise = null
 
     requestScenes: (retries) ->
@@ -380,6 +381,18 @@ module.exports = (env) ->
         catch error
           env.logger.error error.message
 
+      # Each scene needs a unique (but preferably user friendly) id for Pimatic rules etc.
+      # Make sure these are unique among all scenes we have selected
+      for lcname, scene of @scenesByName
+        nameid = lcname.replace(/[^a-z0-9_-]/g, '_')
+        idx = 1
+        suffix = ''
+        while @scenesByNameId[nameid+suffix]?
+          suffix = idx.toString()
+          idx++
+        scene.nameid = nameid+suffix
+        @scenesByNameId[scene.nameid] = scene
+
     _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName.toLowerCase()] )
 
     activateSceneByName: (sceneName, groupId=null) ->
@@ -395,6 +408,9 @@ module.exports = (env) ->
         else
           return Promise.reject(Error("Scene with name #{sceneName} not found"))
       )
+
+    lookupSceneUniqueNameByNameId: (sceneNameId) =>
+      Promise.join @scenesPromise, ( => @scenesByNameId[sceneNameId].uniquename )
 
 
   return exports = {

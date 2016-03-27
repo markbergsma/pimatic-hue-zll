@@ -614,14 +614,15 @@ module.exports = (env) ->
   extend HueZLLExtendedColorLightGroup.prototype, ColorTempMixin
   extend HueZLLExtendedColorLightGroup.prototype, ColormodeMixin
 
-  class HueZLLScenes extends env.devices.Device
+  class HueZLLScenes extends env.devices.ButtonsDevice
     _lastActivatedScene: null
 
     constructor: (@config, @plugin) ->
-      @id = @config.id
-      @name = @config.name
       @extendAttributesActions()
-      super()
+
+      for b in @config.buttons
+        if not b.text? then b.text = b.id
+      super(@config)
 
       @hue = new huebase.BaseHueScenes(this, @plugin)
       @plugin.hueApiAvailable.then(
@@ -674,6 +675,14 @@ module.exports = (env) ->
     getLastActivatedScene: -> Promise.resolve @_lastActivatedScene
 
     getKnownSceneNames: => (scene.uniquename for key, scene of @hue.scenesByName)
+
+    buttonPressed: (buttonId) =>
+      return super(buttonId).then( =>
+        @hue.lookupSceneUniqueNameByNameId(buttonId).then(@activateScene)
+      ).catch( (error) =>
+        env.logger.debug error.message
+        throw new Error("Unknown scene name id #{buttonId}")
+      )
 
 
   return new HueZLLPlugin()
