@@ -52,6 +52,8 @@ module.exports = (env) ->
       )
 
     retryRequest: (request, args=[], retryOptions={}) ->
+      assert request instanceof Function
+      assert Array.isArray(args)
       retries = retryOptions.retries or @defaultRetries
       errorFunction = retryOptions.errorFunction or HueQueue.defaultErrorFunction
       descr = retryOptions.descr or "a"
@@ -95,7 +97,8 @@ module.exports = (env) ->
       BaseHueDevice.hueQ.retryRequest(
         hueApi.version,
         [],
-        retries: 2
+        retries: 2,
+        descr: "bridge version"
       ).then( (version) =>
         env.logger.info "Connected to bridge #{version['name']}, " +
           "API version #{version['version']['api']}, software #{version['version']['software']}"
@@ -116,7 +119,8 @@ module.exports = (env) ->
 
     @inventory: (hueApi) ->
       BaseHueDevice.hueQ.retryRequest(
-        hueApi.lights
+        hueApi.lights, [],
+        descr: "lights inventory"
       ).then( (result) =>
         env.logger.debug result
       ).catch( (error) =>
@@ -260,7 +264,8 @@ module.exports = (env) ->
 
     @inventory: (hueApi) ->
       BaseHueDevice.hueQ.retryRequest(
-        hueApi.groups
+        hueApi.groups, [],
+        descr: "groups inventory"
       ).then( (result) =>
         env.logger.debug result
       ).catch( (error) =>
@@ -322,7 +327,8 @@ module.exports = (env) ->
 
     requestScenes: ->
       return @scenesPromise = BaseHueDevice.hueQ.retryRequest(
-        @hueApi.scenes
+        @hueApi.scenes, [],
+        "scenes"
       ).then(
         @_scenesReceived
       )
