@@ -47,7 +47,7 @@ module.exports = (env) ->
           @framework.deviceManager.registerDeviceClass(DeviceClass.name, {
             configDef: deviceConfigDef[DeviceClass.name],
             prepareConfig: @prepareConfig,
-            createCallback: (deviceConfig) => new DeviceClass(deviceConfig, @hueApi, @config)
+            createCallback: (deviceConfig) => new DeviceClass(deviceConfig, this)
           })
 
       actions = require("./actions") env
@@ -85,20 +85,20 @@ module.exports = (env) ->
 
     template: "huezllonoff"
 
-    constructor: (@config, @hueApi, @_pluginConfig) ->
+    constructor: (@config, @plugin) ->
       @id = @config.id
       @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
       @extendAttributesActions()
       super()
 
-      @hue = new @HueClass(this, @_pluginConfig, @hueApi, @config.hueId)
+      @hue = new @HueClass(this, @plugin.config, @plugin.hueApi, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
 
       if @config.polling < 0
         # Enable global polling (for all lights or groups)
-        @lightStateInitialized = @hue.setupGlobalPolling(@_pluginConfig.polling, @_pluginConfig.retries * 8)
+        @lightStateInitialized = @hue.setupGlobalPolling(@plugin.config.polling, @plugin.config.retries * 8)
       else
-        @lightStateInitialized = @hue.setupPolling(@config.polling, @_pluginConfig.retries * 8)
+        @lightStateInitialized = @hue.setupPolling(@config.polling, @plugin.config.retries * 8)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
 
     extendAttributesActions: () =>
@@ -418,14 +418,14 @@ module.exports = (env) ->
   class HueZLLScenes extends env.devices.Device
     _lastActivatedScene: null
 
-    constructor: (@config, @hueApi, @_pluginConfig) ->
+    constructor: (@config, @plugin) ->
       @id = @config.id
       @name = @config.name
       @extendAttributesActions()
       super()
 
-      @hue = new huebase.BaseHueScenes(this, @_pluginConfig, @hueApi)
-      @hue.requestScenes(@_pluginConfig.retries * 8).then( =>
+      @hue = new huebase.BaseHueScenes(this, @plugin.config, @plugin.hueApi)
+      @hue.requestScenes(@plugin.config.retries * 8).then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
       )
