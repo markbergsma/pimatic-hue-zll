@@ -56,6 +56,8 @@ module.exports = (env) ->
       @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.ActivateHueSceneActionProvider(@framework))
 
+      env.logger.info "Requesting status of lights, light groups and scenes from the Hue API"
+
       @framework.on "after init", =>
         # Check if the mobile-frontent was loaded and get a instance
         mobileFrontend = @framework.pluginManager.getPlugin 'mobile-frontend'
@@ -96,6 +98,9 @@ module.exports = (env) ->
       else
         @lightStateInitialized = @hue.setupPolling(@config.polling, @plugin.config.retries * 8)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
+      # Ask Pimatic to wait completing init until the first poll has completed
+      @plugin.framework.on "after init", (context) =>
+        context.waitForIt @lightStateInitialized
 
     extendAttributesActions: () =>
       @attributes = extend (extend {}, @attributes),
@@ -421,10 +426,13 @@ module.exports = (env) ->
       super()
 
       @hue = new huebase.BaseHueScenes(this, @plugin.config, @plugin.hueApi)
-      @hue.requestScenes(@plugin.config.retries * 8).then( =>
+      scenesRetrieved = @hue.requestScenes(@plugin.config.retries * 8).then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
       )
+      # Ask Pimatic to wait completing init until the scenes have been retrieved
+      @plugin.framework.on "after init", (context) =>
+        context.waitForIt scenesRetrieved
 
     extendAttributesActions: () =>
       @attributes = extend (extend {}, @attributes),
