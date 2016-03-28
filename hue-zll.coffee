@@ -130,6 +130,8 @@ module.exports = (env) ->
       @_setReachable rstate.reachable
       return rstate
 
+    filterConflictingState: (state) -> state
+
     _replaceName: =>
       if @hue.name? and @hue.name.length isnt 0
         env.logger.info("Changing name of #{@constructor.name} device #{@id} " +
