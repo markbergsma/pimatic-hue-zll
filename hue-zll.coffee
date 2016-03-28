@@ -70,10 +70,6 @@ module.exports = (env) ->
         else
           env.logger.warn "mobile-frontend not loaded, no gui will be available"
 
-        if @config.hueApiQueueMaxLength > 0
-          # Override the default auto calculated maximum queue length
-          huebase.BaseHueLight.hueQ.maxLength = @config.hueApiQueueMaxLength
-
     prepareConfig: (deviceConfig) ->
       deviceConfig.name = "" unless deviceConfig.name?
 

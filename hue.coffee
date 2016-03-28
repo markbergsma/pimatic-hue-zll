@@ -89,6 +89,7 @@ module.exports = (env) ->
 
     @initHueQueue: (config, hueApi) ->
       BaseHueDevice.hueQ.concurrency = config.hueApiConcurrency
+      BaseHueDevice.hueQ.maxLength = config.hueApiQueueMaxLength if config.hueApiQueueMaxLength > 0
       BaseHueDevice.hueQ.timeout = config.timeout
       BaseHueDevice.hueQ.defaultRetries = config.retries
       BaseHueDevice.hueQ.bindObject = hueApi
@@ -107,7 +108,8 @@ module.exports = (env) ->
       )
 
     constructor: (@device, @pluginConfig, @hueApi) ->
-      BaseHueDevice.hueQ.maxLength++
+      if @pluginConfig.hueApiQueueMaxLength is 0
+        BaseHueDevice.hueQ.maxLength++
 
   class BaseHueLight extends BaseHueDevice
     devDescr: "light"
