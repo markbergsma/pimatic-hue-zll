@@ -215,8 +215,10 @@ module.exports = (env) ->
       @lightStatusResult.state[k] = v for k, v of stateChange.payload()
       @lightStatusResult.state
 
+    createStateChange: (json) -> hueapi.lightState.create json
+
     prepareStateChange: ->
-      @pendingStateChange = hueapi.lightState.create()
+      @pendingStateChange = @createStateChange()
       @pendingStateChange.transition(@device.config.transitionTime) if @device.config.transitionTime?
       return @pendingStateChange
 
