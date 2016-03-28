@@ -327,10 +327,11 @@ module.exports = (env) ->
       @scenesByName = {}
       @scenesPromise = null
 
-    requestScenes: ->
+    requestScenes: (retries) ->
       return @scenesPromise = BaseHueDevice.hueQ.retryRequest(
         @hueApi.scenes, [],
-        descr: "scenes"
+        descr: "scenes",
+        retries: retries
       ).then(
         @_scenesReceived
       )

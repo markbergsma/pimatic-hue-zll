@@ -425,7 +425,7 @@ module.exports = (env) ->
       super()
 
       @hue = new huebase.BaseHueScenes(this, @_pluginConfig, @hueApi)
-      @hue.requestScenes().then( =>
+      @hue.requestScenes(@_pluginConfig.retries * 8).then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
       )
