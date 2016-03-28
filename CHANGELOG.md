@@ -1,5 +1,5 @@
-### (master)
-* Implement basic support for Hue scene activation with the HueZLLScenes device and "activate hue scene" rule action
+### 0.2.0
+* Basic support for Hue scene activation with the HueZLLScenes device and "activate hue scene" rule action
 * Add optional "transition time" parameter to light state change rule actions as well as the REST API, to control the speed/duration of the change
 * Many changes under the hood w.r.t. Hue API error handling: most actions are retried a configurable amount of times on failure and transient errors are hidden
 * Restore the full original light state after "... for X time" rule actions
