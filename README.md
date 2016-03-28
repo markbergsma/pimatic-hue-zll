@@ -2,7 +2,7 @@
 
 Integration of Pimatic with (Zigbee Light Link based) Philips Hue networks, using the Philips Hue (bridge) API.
 
-This plugin allows control of Philips Hue lights and other Zigbee Light Link (ZLL) based devices from Pimatic, and the status of Hue devices can be observed and used as events for Pimatic rules interacting with other devices.
+This plugin allows control of Philips Hue lights and other Zigbee Light Link (ZLL) based devices from Pimatic, and the status of Hue devices can be observed and used as events for Pimatic rules interacting with other devices. Hue scenes that were created on the Hue bridge (by other apps) can be activated from Pimatic rules.
 
 The Hue system supports 5 light types, which have counterparts in the ZLL specification:
 
@@ -42,12 +42,13 @@ A minimal Pimatic `config.json` configuration of the hue-zll plugin needs the ho
   ]
 ```
 
-Optionally, you can specify a different TCP port number, a timeout for Hue API commands (default: 500ms), a maximum amount of concurrent Hue API requests (default: 1) and a different polling interval (from the default 5s) for retrieving the latest Hue device status from the bridge:
+Optionally, you can specify a different TCP port number (``port``), a timeout for Hue API commands (``timeout``, default: 500ms), a maximum amount of concurrent Hue API requests (``hueApiConcurrency``, default: 1) and the number of times a Hue API request will be retried on transient errors (``retries``, default: 1). A different polling interval (from the default 5s) for retrieving the latest Hue device status from the bridge:
 
 ```json
       "port": 8080,
       "polling": 10000,
       "timeout": 2000,
+      "retries": 3,
       "hueApiConcurrency": 2
 ```
 
@@ -61,7 +62,7 @@ it means that the plugin can't send API requests to the Hue bridge fast enough (
 
 ### Device configuration
 
-Currently all Hue devices need to be added to the `devices` section in Pimatic's `config.json`. At minimum the device needs to be given a unique Pimatic device id, a device class, and the Hue id as it is known by the bridge.
+Currently all Hue devices need to be added to the `devices` section in Pimatic's `config.json`. At minimum the device needs to be given a unique Pimatic device id and a device class. Lights and light groups also require the Hue id as it is known by the bridge.
 
 A (user friendly) name property is required by Pimatic as well, but if you leave it out or define it as the empty string `""`, the Hue-ZLL plugin will retrieve the light or group name from the Hue API.
 
@@ -88,7 +89,7 @@ If you want to override the `name` property as it is displayed throughout Pimati
       "name": "Bedroom ceiling light",
 ```
 
-The following device classes are available from the HueZLL plugin:
+The following light device classes are available from the HueZLL plugin:
 
 | Class name               | Description   |
 | ------------------------ | ------------- |
@@ -189,14 +190,37 @@ set color of HueLight to sat 10% hue 0% transition 1500ms for 10s
 
 Because the Hue bridge doesn't accept changes to attributes while a light is switched off, the plugin also turns on the light with each action other than on/off state changes.
 
+## Scenes
+Pimatic-Hue-ZLL has basic Hue scenes support. Scenes that are known by the Hue bridge can be activated using Pimatic rules.
+
+First make sure a ```HueZLLScenes``` device is defined in the configuration devices section:
+```json
+    {
+      "id": "hue_scenes",
+      "class": "HueZLLScenes",
+      "name": "Hue Scenes"
+    },
+```
+
+Arbitrary scenes can then be recalled using the ```activate hue scene``` action, using the scene name between quotes:
+
+```
+activate hue scene "Feet up"
+activate hue scene "Relax" limited to group Livingroom
+activate hue scene "Energize" on group Ceiling
+```
+The latter two actions restricts the scene to only lights that are part of the Livingroom group, as it is known by both Pimatic and the Hue bridge.
+
+The scene last activated by Pimatic is available in the ```lastActivatedScene``` attribute of the ```HueZLLScenes``` device. Scenes can be activated from the Pimatic REST API using the ```activateScene``` action.
+
 ## Todo
 Some features and wishlist items on the todo-list are:
-* Hue light scenes (scene activation, possibly UI support)
+* Hue scenes: ~~scene activation~~ (done), UI support (awaits Pimatic 0.9)
 * Alternative ways of setting colors (XY point support, RGB, predefined colors)
 * Automatically locating the Hue bridge, and bridge access registration
 
 This will need upstream support:
 * Zigbee sensors (notably Hue dimmer switch and Hue tap support) (not yet supported in node-hue-api)
-* Automatically detecting the Hue/ZLL light type (needs changes in Pimatic)
-* Automatic discovery of all available Hue lights without manual configuration (needs changes in Pimatic)
+* Automatically detecting the Hue/ZLL light type (awaits Pimatic 0.9)
+* Automatic discovery of all available Hue lights without manual configuration (awaits Pimatic 0.9)
 
