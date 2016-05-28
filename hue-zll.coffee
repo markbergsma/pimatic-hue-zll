@@ -46,7 +46,7 @@ module.exports = (env) ->
         do (DeviceClass) =>
           @framework.deviceManager.registerDeviceClass(DeviceClass.name, {
             configDef: deviceConfigDef[DeviceClass.name],
-            prepareConfig: @prepareConfig,
+            prepareConfig: HueZLLOnOffLight.prepareConfig,
             createCallback: (deviceConfig) => new DeviceClass(deviceConfig, this)
           })
 
@@ -72,8 +72,9 @@ module.exports = (env) ->
         else
           env.logger.warn "mobile-frontend not loaded, no gui will be available"
 
-    prepareConfig: (deviceConfig) ->
-      deviceConfig.name = "" unless deviceConfig.name?
+    prepareConfig: (pConf) ->
+      # Previous versions unintentionally added a 'name' property to the plugin config in newer Pimatic versions
+      delete pConf['name'] if pConf['name']?
 
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
@@ -107,6 +108,9 @@ module.exports = (env) ->
         reachable:
           description: "Light is reachable?"
           type: t.boolean
+
+    @prepareConfig: (deviceConfig) ->
+      deviceConfig.name = "" unless deviceConfig.name?
 
     # Wait on first poll on initialization
     waitForInit: (callback) => Promise.join @lightStateInitialized, callback
