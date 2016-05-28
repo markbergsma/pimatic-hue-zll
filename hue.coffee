@@ -193,8 +193,7 @@ module.exports = (env) ->
       )
 
     _diffState: (newRState) ->
-      assert @lightStatusResult?.state?
-      lstate = @lightStatusResult.state
+      lstate = @lightStatusResult?.state or {}
       diff = {}
       diff[k] = v for k, v of newRState when (
           not lstate[k]? or
@@ -203,14 +202,15 @@ module.exports = (env) ->
       return diff
 
     _statusReceived: (result) =>
-      diff = @_diffState(result.state)
-      if Object.keys(diff).length > 0
-        env.logger.debug "Received #{@devDescr} #{@hueId} state change:", JSON.stringify(diff)
+      if result.state?
+        diff = @_diffState(result.state)
+        if Object.keys(diff).length > 0
+          env.logger.debug "Received #{@devDescr} #{@hueId} state change:", JSON.stringify(diff)
       @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
 
-      @deviceStateCallback?(result.state)
+      @deviceStateCallback?(result.state) if result.state?
       return result.state
 
     _mergeStateChange: (stateChange) ->
