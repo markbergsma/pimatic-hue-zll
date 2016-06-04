@@ -206,12 +206,12 @@ module.exports = (env) ->
         diff = @_diffState(result.state)
         if Object.keys(diff).length > 0
           env.logger.debug "Received #{@devDescr} #{@hueId} state change:", JSON.stringify(diff)
-      @lightStatusResult = result
+        @lightStatusResult = result
       @name = result.name if result.name?
       @type = result.type if result.type?
 
       @deviceStateCallback?(result.state) if result.state?
-      return result.state
+      return result.state or Promise.reject(Error("Missing state object in light status result"))
 
     _mergeStateChange: (stateChange) ->
       @lightStatusResult.state[k] = v for k, v of stateChange.payload()
