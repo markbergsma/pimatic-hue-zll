@@ -113,7 +113,7 @@ module.exports = (env) ->
         )
         .match(" to ")
         .matchNumericExpression( (next, ts) => valueTokens = ts )
-        .match('K', optional: yes, ( => kelvin = true ))
+        .match(["K", " K"], optional: yes, ( => kelvin = true ))
 
       # optional "transition 5s"
       transitionMs = null
