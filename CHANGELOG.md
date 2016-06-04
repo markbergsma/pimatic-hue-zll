@@ -1,3 +1,9 @@
+### 0.2.1
+* Allow a space before the K (Kelvin) in the set color temperature action
+* Fix bug where pimatic-hue-zll would keep spamming the log and need a restart to work properly again after connection loss in some circumstances (issues #7, #10)
+* Resolve erroneous addition of 'name' plugin config property since Pimatic 0.8.103 (issue #8)
+* Fix bug with restoration of light state for OnOff and Dimmable lights (rule actions with "for X time")
+
 ### 0.2.0
 * Basic support for Hue scene activation with the HueZLLScenes device and "activate hue scene" rule action
 * Add optional "transition time" parameter to light state change rule actions as well as the REST API, to control the speed/duration of the change
