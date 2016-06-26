@@ -103,6 +103,9 @@ module.exports = (env) ->
       @plugin.framework.on "after init", (context) =>
         context.waitForIt @lightStateInitialized
 
+    destroy: () ->
+      super()
+
     extendAttributesActions: () =>
       @attributes = extend (extend {}, @attributes),
         reachable:
@@ -439,6 +442,9 @@ module.exports = (env) ->
       # Ask Pimatic to wait completing init until the scenes have been retrieved
       @plugin.framework.on "after init", (context) =>
         context.waitForIt scenesRetrieved
+
+    destroy: () ->
+      super()
 
     extendAttributesActions: () =>
       @attributes = extend (extend {}, @attributes),
