@@ -33,4 +33,8 @@ module.exports = {
       description: "Maximum amount of requests queued for the Hue API"
       type: "integer"
       default: 0
+    debug:
+      description: "Enable debug logging"
+      type: "boolean"
+      default: false
 }
