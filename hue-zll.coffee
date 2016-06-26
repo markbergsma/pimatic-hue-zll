@@ -100,10 +100,12 @@ module.exports = (env) ->
         @lightStateInitialized = @hue.setupPolling(@config.polling, @plugin.config.retries * 8)
       @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
       # Ask Pimatic to wait completing init until the first poll has completed
-      @plugin.framework.on "after init", (context) =>
+      @_cbAfterInit = (context) =>
         context.waitForIt @lightStateInitialized
+      @plugin.framework.on "after init", @_cbAfterInit
 
     destroy: () ->
+      @plugin.framework.removeListener "after init", @_cbAfterInit
       super()
 
     extendAttributesActions: () =>
@@ -440,10 +442,12 @@ module.exports = (env) ->
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
       )
       # Ask Pimatic to wait completing init until the scenes have been retrieved
-      @plugin.framework.on "after init", (context) =>
+      @_cbAfterInit = (context) =>
         context.waitForIt scenesRetrieved
+      @plugin.framework.on "after init", @_cbAfterInit
 
     destroy: () ->
+      @plugin.framework.removeListener "after init", @_cbAfterInit
       super()
 
     extendAttributesActions: () =>
