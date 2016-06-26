@@ -108,8 +108,12 @@ module.exports = (env) ->
       )
 
     constructor: (@device, @pluginConfig, @hueApi) ->
+      @_destroyed = false
       if @pluginConfig.hueApiQueueMaxLength is 0
         BaseHueDevice.hueQ.maxLength++
+
+    destroy: () ->
+      @_destroyed = true
 
   class BaseHueLight extends BaseHueDevice
     devDescr: "light"
@@ -140,16 +144,20 @@ module.exports = (env) ->
       @lightStatusResult =
         state: {}
       @deviceStateCallback = null
-      @_setupStatusPolling()
-
-    _setupStatusPolling: ->
       @registerStatusHandler(@_statusReceived)
+
+    destroy: () ->
+      @deregisterStatusHandler(@_statusReceived)
+      super()
 
     registerStatusHandler: (callback, hueId=@hueId) ->
       if Array.isArray(@constructor.statusCallbacks[hueId])
         @constructor.statusCallbacks[hueId].push(callback)
       else
         @constructor.statusCallbacks[hueId] = Array(callback)
+
+    deregisterStatusHandler: (callback, hueId=@hueId) ->
+      @constructor.statusCallbacks[hueId] = (cb for cb in @constructor.statusCallbacks when cb isnt callback)
 
     setupGlobalPolling: (interval, retries) ->
       repeatPoll = () =>
@@ -166,7 +174,7 @@ module.exports = (env) ->
       repeatPoll = () =>
         firstPoll = @poll(retries)
         firstPoll.delay(interval).finally( =>
-            repeatPoll()
+            repeatPoll() unless @_destroyed
             return null
           )
         return firstPoll

@@ -106,6 +106,7 @@ module.exports = (env) ->
 
     destroy: () ->
       @plugin.framework.removeListener "after init", @_cbAfterInit
+      @hue.destroy()
       super()
 
     extendAttributesActions: () =>
@@ -448,6 +449,7 @@ module.exports = (env) ->
 
     destroy: () ->
       @plugin.framework.removeListener "after init", @_cbAfterInit
+      @hue.destroy()
       super()
 
     extendAttributesActions: () =>
