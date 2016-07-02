@@ -124,11 +124,14 @@ module.exports = (env) ->
     # Static methods for polling all lights
 
     @inventory: (hueApi) ->
-      BaseHueDevice.hueQ.retryRequest(
+      return BaseHueLight.discover(hueApi).then( (result) =>
+        env.logger.debug result
+      )
+
+    @discover: (hueApi) ->
+      return BaseHueDevice.hueQ.retryRequest(
         hueApi.lights, [],
         descr: "lights inventory"
-      ).then( (result) =>
-        env.logger.debug result
       ).catch( (error) =>
         env.logger.error "Error while retrieving inventory of all lights:", error.message
       )
@@ -275,11 +278,14 @@ module.exports = (env) ->
     # Static methods for polling all lights
 
     @inventory: (hueApi) ->
-      BaseHueDevice.hueQ.retryRequest(
+      return BaseHueLightGroup.discover(hueApi).then( (result) =>
+        env.logger.debug result
+      )
+
+    @discover: (hueApi) ->
+      return BaseHueDevice.hueQ.retryRequest(
         hueApi.groups, [],
         descr: "groups inventory"
-      ).then( (result) =>
-        env.logger.debug result
       ).catch( (error) =>
         env.logger.error "Error while retrieving inventory of all light groups:", error.message
       )

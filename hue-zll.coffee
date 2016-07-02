@@ -72,10 +72,107 @@ module.exports = (env) ->
         else
           env.logger.warn "mobile-frontend not loaded, no gui will be available"
 
+      @framework.deviceManager.on "discover", @onDiscover
+
     prepareConfig: (pConf) ->
       # Previous versions unintentionally added a 'name' property to the plugin config in newer Pimatic versions
       delete pConf['name'] if pConf['name']?
 
+    onDiscover: (eventData) =>
+      env.logger.debug "Starting discovery of Hue devices"
+
+      lightsInventoryPromise = huebase.BaseHueLight.discover(@hueApi)
+      groupsInventoryPromise = huebase.BaseHueLightGroup.discover(@hueApi)
+      lightsInventoryPromise.then(@discoverLights)
+      Promise.join lightsInventoryPromise, groupsInventoryPromise, @discoverLightGroups
+
+    discoverLights: (lightsInventory) =>
+      hueLights = {}
+      for id, dev of @framework.deviceManager.devices
+        if dev instanceof HueZLLOnOffLight and dev.constructor.name.match(/^HueZLL.+Light$/)
+          hueLights[dev.config.hueId] = dev
+
+      for light in lightsInventory.lights
+        deviceClass = HueZLLPlugin.deviceClass(light.type)
+        if deviceClass?
+          if not hueLights[light.id]?
+            config = {
+              class: deviceClass,
+              name: light.name,
+              hueId: light.id
+            }
+            descr = "#{config.name} (#{light.manufacturername} #{light.modelid}) [#{light.type}]"
+
+            @framework.deviceManager.discoveredDevice(
+              'pimatic-hue-zll',
+              "Hue light #{config.hueId}: #{descr}",
+              config
+            )
+          else
+            env.logger.debug "Skipping known hue light id #{light.id}"
+        else
+          env.logger.warn "Could not classify hue light id #{light.id}, type: #{light.type}"
+
+    discoverLightGroups: (lightsInventory, groupsInventory) =>
+      hueLightGroups = {}
+      for id, dev of @framework.deviceManager.devices
+        if dev instanceof HueZLLOnOffLight and dev.constructor.name.match(/^HueZLL.+LightGroup$/)
+          hueLightGroups[dev.config.hueId] = dev
+
+      for group in groupsInventory
+        group.id = parseInt(group.id)
+        if not hueLightGroups[group.id]?
+          if group.lights? or group.id is 0
+            # Attempt to find the appropriate light group type (class) based on the capabilities of the
+            # lights in the group
+            if group.lights?
+              groupLights = (parseInt(id) for id in group.lights)
+            else if group.id is 0
+              groupLights = (parseInt(light.id) for light in lightsInventory.lights)
+            lightTypes = (HueZLLPlugin.deviceClass(light.type) for light in lightsInventory.lights \
+              when parseInt(light.id) in groupLights)
+            deviceClass = lightTypes.reduce (devClass, d) ->
+              if devClass is d
+                devClass
+              else if devClass is 'HueZLLExtendedColorLight'
+                d
+              else if devClass in ['HueZLLColorTempLight','HueZLLColorLight'] and d isnt 'HueZLLExtendedColorLight'
+                'HueZLLDimmableLight'
+              else if devClass is 'HueZLLDimmableLight' and d is 'HueZLLOnOffLight'
+                d
+              else
+                devClass
+            deviceClass += 'Group'
+          else
+            deviceClass = 'HueZLLExtendedColorLightGroup' # No info available, so let's provide all functionality
+
+          config = {
+            class: deviceClass,
+            name: group.name,
+            hueId: group.id
+          }
+          descr = config.name
+          if config.hueId is 0
+            descr += " (all lights)"
+          else if groupLights?
+            descr += " (lights #{groupLights})"
+
+          @framework.deviceManager.discoveredDevice(
+            'pimatic-hue-zll',
+            "Hue light group #{config.hueId}: #{descr}",
+            config
+          )
+        else
+          env.logger.debug "Skipping known hue light group id #{group.id}"
+
+    @deviceClass: (deviceType) ->
+      return switch deviceType
+        when "On/Off plug-in unit"      then 'HueZLLOnOffLight'
+        when "Dimmable light"           then 'HueZLLDimmableLight'
+        when "Color temperature light"  then 'HueZLLColorTempLight'
+        when "Color light"              then 'HueZLLColorLight'
+        when "Extended color light"     then 'HueZLLExtendedColorLight'
+        else null
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
     HueClass: huebase.BaseHueLight
