@@ -20,11 +20,6 @@ module.exports = (env) ->
   class HueZLLPlugin extends env.plugins.Plugin
 
     init: (app, @framework, @config) =>
-      @hueApi = huebase.initHueApi(@config)
-      huebase.BaseHueDevice.initHueQueue(@config, @hueApi)
-
-      huebase.BaseHueDevice.bridgeVersion(@hueApi)
-
       deviceConfigDef = require("./device-config-schema")
 
       deviceClasses = [
@@ -54,7 +49,9 @@ module.exports = (env) ->
       @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.ActivateHueSceneActionProvider(@framework))
 
-      env.logger.info "Requesting status of lights, light groups and scenes from the Hue API"
+      if @config.host?.length > 0
+        @hueApi = huebase.initHueApi(@config)
+        env.logger.info "Requesting status of lights, light groups and scenes from the Hue API"
 
       @framework.on "after init", =>
         # Check if the mobile-frontent was loaded and get a instance
@@ -77,12 +74,37 @@ module.exports = (env) ->
       delete pConf['name'] if pConf['name']?
 
     onDiscover: (eventData) =>
-      env.logger.debug "Starting discovery of Hue devices"
+      @discoverBridge(eventData).then( =>
+        env.logger.debug "Starting discovery of Hue devices"
 
-      lightsInventoryPromise = huebase.BaseHueLight.discover(@hueApi)
-      groupsInventoryPromise = huebase.BaseHueLightGroup.discover(@hueApi)
-      lightsInventoryPromise.then(@discoverLights)
-      Promise.join lightsInventoryPromise, groupsInventoryPromise, @discoverLightGroups
+        lightsInventoryPromise = huebase.BaseHueLight.discover(@hueApi)
+        groupsInventoryPromise = huebase.BaseHueLightGroup.discover(@hueApi)
+        lightsInventoryPromise.then(@discoverLights)
+        Promise.join lightsInventoryPromise, groupsInventoryPromise, @discoverLightGroups
+      )
+
+    discoverBridge: (eventData) =>
+      if @config.host?.length > 0
+        return Promise.resolve(@config.host)
+
+      @framework.deviceManager.discoverMessage(
+        'pimatic-hue-zll',
+        "No Hue bridge defined in the configuration, starting automatic search for the Hue bridge"
+      )
+      return huebase.searchBridge(Math.min(eventData.time, 5000)
+      ).then( (ipaddr) =>
+        @framework.deviceManager.discoverMessage(
+          'pimatic-hue-zll',
+          "Found Hue bridge #{ipaddr}, adding it to the configuration"
+        )
+        @config.host = ipaddr
+        @hueApi = huebase.initHueApi(@config)
+      ).catch( (error) =>
+        @framework.deviceManager.discoverMessage(
+          'pimatic-hue-zll',
+          error.message
+        )
+      )
 
     discoverLights: (lightsInventory) =>
       env.logger.debug "Hue API lights inventory:"

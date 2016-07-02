@@ -74,11 +74,28 @@ module.exports = (env) ->
   promiseRetry = (args...) => Promise.resolve es6PromiseRetry args...
 
   initHueApi = (config) ->
-    return new hueapi.HueApi(
+    hueApi = hueapi.HueApi(
       config.host,
       config.username,
       config.timeout,
       config.port
+    )
+    BaseHueDevice.initHueQueue(config, hueApi)
+    BaseHueDevice.bridgeVersion(hueApi)
+    return hueApi
+
+  searchBridge = (timeout=5000) ->
+    hueapi.nupnpSearch().catch( (error) =>
+      hueapi.upnpSearch(timeout)
+    ).then( (result) =>
+      env.logger.debug "Hue bridges:", result
+      if result.length is 0
+        return Promise.reject Error("No Hue bridges found.")
+      if result.length > 1
+        error.logger.warn "Found #{result.length} Hue bridges, but only 1 is supported. Picking the first one found."
+      return result[0].ipaddress
+    ).catch( (error) =>
+      return Promise.reject Error("Could not find Hue bridge: " + error.message)
     )
 
   class BaseHueDevice
@@ -373,6 +390,7 @@ module.exports = (env) ->
 
   return exports = {
     initHueApi,
+    searchBridge,
     HueQueue,
     BaseHueDevice,
     BaseHueLight,

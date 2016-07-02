@@ -9,6 +9,7 @@ module.exports = {
     host:
       description: "Hostname or IP address of the Hue bridge"
       type: "string"
+      required: false
     port:
       description: "Hue Bridge TCP port number"
       type: "integer"
