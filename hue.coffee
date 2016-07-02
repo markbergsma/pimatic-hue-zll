@@ -123,11 +123,6 @@ module.exports = (env) ->
 
     # Static methods for polling all lights
 
-    @inventory: (hueApi) ->
-      return BaseHueLight.discover(hueApi).then( (result) =>
-        env.logger.debug result
-      )
-
     @discover: (hueApi) ->
       return BaseHueDevice.hueQ.retryRequest(
         hueApi.lights, [],
@@ -276,11 +271,6 @@ module.exports = (env) ->
     @statusCallbacks: {}
 
     # Static methods for polling all lights
-
-    @inventory: (hueApi) ->
-      return BaseHueLightGroup.discover(hueApi).then( (result) =>
-        env.logger.debug result
-      )
 
     @discover: (hueApi) ->
       return BaseHueDevice.hueQ.retryRequest(

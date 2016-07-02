@@ -24,8 +24,6 @@ module.exports = (env) ->
       huebase.BaseHueDevice.initHueQueue(@config, @hueApi)
 
       huebase.BaseHueDevice.bridgeVersion(@hueApi)
-      huebase.BaseHueLight.inventory(@hueApi)
-      huebase.BaseHueLightGroup.inventory(@hueApi)
 
       deviceConfigDef = require("./device-config-schema")
 
@@ -87,6 +85,9 @@ module.exports = (env) ->
       Promise.join lightsInventoryPromise, groupsInventoryPromise, @discoverLightGroups
 
     discoverLights: (lightsInventory) =>
+      env.logger.debug "Hue API lights inventory:"
+      env.logger.debug lightsInventory
+
       hueLights = {}
       for id, dev of @framework.deviceManager.devices
         if dev instanceof HueZLLOnOffLight and dev.constructor.name.match(/^HueZLL.+Light$/)
@@ -114,6 +115,9 @@ module.exports = (env) ->
           env.logger.warn "Could not classify hue light id #{light.id}, type: #{light.type}"
 
     discoverLightGroups: (lightsInventory, groupsInventory) =>
+      env.logger.debug "Hue API light groups inventory:"
+      env.logger.debug groupsInventory
+
       hueLightGroups = {}
       for id, dev of @framework.deviceManager.devices
         if dev instanceof HueZLLOnOffLight and dev.constructor.name.match(/^HueZLL.+LightGroup$/)
