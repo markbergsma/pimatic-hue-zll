@@ -124,9 +124,9 @@ module.exports = (env) ->
         env.logger.error "Error while attempting to retrieve the Hue bridge version:", error.message
       )
 
-    constructor: (@device, @pluginConfig, @hueApi) ->
+    constructor: (@device, @plugin) ->
       @_destroyed = false
-      if @pluginConfig.hueApiQueueMaxLength is 0
+      if @plugin.config.hueApiQueueMaxLength is 0
         BaseHueDevice.hueQ.maxLength++
 
     destroy: () ->
@@ -153,8 +153,8 @@ module.exports = (env) ->
         if Array.isArray(BaseHueLight.statusCallbacks[light.id])
           cb(light) for cb in BaseHueLight.statusCallbacks[light.id]
 
-    constructor: (@device, @pluginConfig, @hueApi, @hueId) ->
-      super(@device, @pluginConfig, @hueApi)
+    constructor: (@device, @plugin, @hueId) ->
+      super(@device, @plugin)
       @pendingStateChange = null
       @lightStatusResult =
         state: {}
@@ -195,8 +195,8 @@ module.exports = (env) ->
         return firstPoll
       return if interval > 0 then repeatPoll() else @poll(retries)
 
-    pollAllLights: (retries=@pluginConfig.retries) =>
-      return BaseHueDevice.hueQ.retryRequest(@hueApi.lights, [],
+    pollAllLights: (retries=@plugin.config.retries) =>
+      return BaseHueDevice.hueQ.retryRequest(@plugin.hueApi.lights, [],
         retries: retries,
         descr: "poll of all lights"
       ).then(
@@ -205,8 +205,8 @@ module.exports = (env) ->
         env.logger.error error.message
       )
 
-    poll: (retries=@pluginConfig.retries) =>
-      return BaseHueDevice.hueQ.retryRequest(@hueApi.lightStatus, [@hueId],
+    poll: (retries=@plugin.config.retries) =>
+      return BaseHueDevice.hueQ.retryRequest(@plugin.hueApi.lightStatus, [@hueId],
         retries: retries,
         descr: "poll of light #{@hueId}"
       ).then(
@@ -249,7 +249,7 @@ module.exports = (env) ->
 
     getLightStatus: -> @lightStatusResult
 
-    _hueStateChangeFunction: -> @hueApi.setLightState
+    _hueStateChangeFunction: -> @plugin.hueApi.setLightState
 
     changeHueState: (hueStateChange) ->
       retryHueStateChange = (remainingRetries) =>
@@ -274,7 +274,7 @@ module.exports = (env) ->
               return Promise.reject error
         )
 
-      return retryHueStateChange(@pluginConfig.retries).then( =>
+      return retryHueStateChange(@plugin.config.retries).then( =>
         env.logger.debug "Changing #{@devDescr} #{@hueId} state:", JSON.stringify(hueStateChange.payload())
         @_mergeStateChange hueStateChange
       ).finally( =>
@@ -313,8 +313,8 @@ module.exports = (env) ->
       return BaseHueLightGroup.globalPolling or
         BaseHueLightGroup.globalPolling = repeatPoll()
 
-    pollAllGroups: (retries=@pluginConfig.retries) =>
-      return BaseHueDevice.hueQ.retryRequest(@hueApi.groups, [],
+    pollAllGroups: (retries=@plugin.config.retries) =>
+      return BaseHueDevice.hueQ.retryRequest(@plugin.hueApi.groups, [],
         retries: retries,
         descr: "poll of all light groups"
       ).then(
@@ -323,8 +323,8 @@ module.exports = (env) ->
         env.logger.error error.message
       )
 
-    poll: (retries=@pluginConfig.retries) =>
-      return BaseHueDevice.hueQ.retryRequest(@hueApi.getGroup, [@hueId],
+    poll: (retries=@plugin.config.retries) =>
+      return BaseHueDevice.hueQ.retryRequest(@plugin.hueApi.getGroup, [@hueId],
         retries: retries,
         descr: "poll of group #{@hueId}"
       ).then(
@@ -340,19 +340,19 @@ module.exports = (env) ->
       delete result.action if result.action?
       return super(result)
 
-    _hueStateChangeFunction: -> @hueApi.setGroupLightState
+    _hueStateChangeFunction: -> @plugin.hueApi.setGroupLightState
 
 
   class BaseHueScenes extends BaseHueDevice
 
-    constructor: (@device, @pluginConfig, @hueApi) ->
-      super(@device, @pluginConfig, @hueApi)
+    constructor: (@device, @plugin) ->
+      super(@device, @plugin)
       @scenesByName = {}
       @scenesPromise = null
 
     requestScenes: (retries) ->
       return @scenesPromise = BaseHueDevice.hueQ.retryRequest(
-        @hueApi.scenes, [],
+        @plugin.hueApi.scenes, [],
         descr: "scenes",
         retries: retries
       ).then(
@@ -377,7 +377,7 @@ module.exports = (env) ->
       return @_lookupSceneByName(sceneName).then( (scene) =>
         if scene? and scene.id?
           return BaseHueLightGroup.hueQ.retryRequest(
-            @hueApi.activateScene, [scene.id, groupId],
+            @plugin.hueApi.activateScene, [scene.id, groupId],
             descr: "scene activation"
           ).then( =>
             env.logger.debug "Activating Hue scene id: #{scene.id} name: \"#{sceneName}\"" + \

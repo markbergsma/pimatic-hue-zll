@@ -213,7 +213,7 @@ module.exports = (env) ->
       @extendAttributesActions()
       super()
 
-      @hue = new @HueClass(this, @plugin.config, @plugin.hueApi, @config.hueId)
+      @hue = new @HueClass(this, @plugin, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
 
       if @config.polling < 0
@@ -560,7 +560,7 @@ module.exports = (env) ->
       @extendAttributesActions()
       super()
 
-      @hue = new huebase.BaseHueScenes(this, @plugin.config, @plugin.hueApi)
+      @hue = new huebase.BaseHueScenes(this, @plugin)
       scenesRetrieved = @hue.requestScenes(@plugin.config.retries * 8).then( =>
         env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
           ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
