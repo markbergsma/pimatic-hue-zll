@@ -6,6 +6,7 @@ module.exports = {
     username:
       description: "Hue bridge API key/username"
       type: "string"
+      required: false
     host:
       description: "Hostname or IP address of the Hue bridge"
       type: "string"

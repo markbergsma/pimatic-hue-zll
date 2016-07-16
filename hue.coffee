@@ -81,7 +81,7 @@ module.exports = (env) ->
       config.port
     )
     BaseHueDevice.initHueQueue(config, hueApi)
-    BaseHueDevice.bridgeVersion(hueApi)
+    BaseHueDevice.bridgeVersion(hueApi) if config.username?.length > 0
     return hueApi
 
   searchBridge = (timeout=5000) ->
@@ -97,6 +97,8 @@ module.exports = (env) ->
     ).catch( (error) =>
       return Promise.reject Error("Could not find Hue bridge: " + error.message)
     )
+
+  registerUser = (hueApi, hostname, userDescription) -> hueApi.registerUser hostname, userDescription
 
   class BaseHueDevice
     @hueQ: new HueQueue({
@@ -391,6 +393,7 @@ module.exports = (env) ->
   return exports = {
     initHueApi,
     searchBridge,
+    registerUser,
     HueQueue,
     BaseHueDevice,
     BaseHueLight,

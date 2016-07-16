@@ -49,8 +49,13 @@ module.exports = (env) ->
       @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.ActivateHueSceneActionProvider(@framework))
 
-      @hueApiAvailable = @discoverBridge().then =>
-        env.logger.info "Requesting status of lights, light groups and scenes from the Hue API"
+      if @config.username?.length > 0
+        @hueApiAvailable = @discoverBridge().then =>
+          env.logger.info "Requesting status of lights, light groups and scenes from the Hue API"
+      else
+        env.logger.warn "Hue bridge username/key is not defined in the configuration. Please run device discovery."
+        @hueApiAvailable = Promise.reject Error("Hue bridge username/key unavailable")
+        @hueApiAvailable.suppressUnhandledRejections()
 
       @framework.on "after init", =>
         # Check if the mobile-frontent was loaded and get a instance
@@ -73,7 +78,10 @@ module.exports = (env) ->
       delete pConf['name'] if pConf['name']?
 
     onDiscover: (eventData) =>
-      @discoverBridge(eventData).then( =>
+      @discoverBridge(eventData
+      ).then(
+        @registerUser
+      ).then( =>
         env.logger.debug "Starting discovery of Hue devices"
 
         lightsInventoryPromise = huebase.BaseHueLight.discover(@hueApi)
@@ -108,14 +116,43 @@ module.exports = (env) ->
           throw error
         )
 
-      return apiPromise.then( (hostOrIp) =>
-        # Make a shallow copy of @config to avoid actually changing the configuration
-        config = extend {}, @config
-        config.host = hostOrIp
-        # Initialize hueApi for the plugin
-        @hueApi = huebase.initHueApi(config)
-        return hostOrIp
-      )
+      return apiPromise.then(@initApi)
+
+    registerUser: (hostname) =>
+      if @config.username?.length > 0
+        return Promise.resolve [hostname, @config.username]
+      else
+        @framework.deviceManager.discoverMessage(
+          'pimatic-hue-zll',
+          "No Hue API username (key) defined in the configuration. Attempting to register; " + \
+            "Please press the link button on the Hue bridge within 30s!"
+        )
+        return huebase.registerUser(
+          @hueApi, hostname, "pimatic-hue-zll"
+        ).then( (apiKey) =>
+          @framework.deviceManager.discoverMessage(
+            'pimatic-hue-zll',
+            "Created Hue API key #{apiKey}. Adding it to the plugin configuration."
+          )
+          @config.username = apiKey
+          @initApi(hostname)
+          return [hostname, apiKey]
+        ).catch( (error) =>
+          @framework.deviceManager.discoverMessage(
+            'pimatic-hue-zll',
+            "Hue API username registration failed; #{error.message}"
+          )
+          throw error
+        )
+
+    initApi: (hostOrIp) =>
+      env.logger.debug "(Re)Initializing Hue API using host #{hostOrIp}"
+      # Make a shallow copy of @config to avoid actually changing the configuration
+      config = extend {}, @config
+      config.host = hostOrIp
+      # Initialize hueApi for the plugin
+      @hueApi = huebase.initHueApi(config)
+      return hostOrIp
 
     discoverLights: (lightsInventory) =>
       env.logger.debug "Hue API lights inventory:"
@@ -226,7 +263,11 @@ module.exports = (env) ->
 
       @hue = new @HueClass(this, @plugin, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
-      @plugin.hueApiAvailable.then(@init)
+      @plugin.hueApiAvailable.then(
+        @init
+      ).catch( (error) =>
+        env.logger.error "Can't initialize device #{@id} because the Hue API failed to initialize: #{error.message}"
+      )
 
     destroy: () ->
       @plugin.framework.removeListener "after init", @_cbAfterInit
@@ -574,7 +615,11 @@ module.exports = (env) ->
       super()
 
       @hue = new huebase.BaseHueScenes(this, @plugin)
-      @plugin.hueApiAvailable.then(init)
+      @plugin.hueApiAvailable.then(
+        init
+      ).catch( (error) =>
+        env.logger.error "Can't initialize device #{@id} because the Hue API failed to initialize: #{error.message}"
+      )
 
     destroy: () ->
       @plugin.framework.removeListener "after init", @_cbAfterInit
