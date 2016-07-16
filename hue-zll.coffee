@@ -49,8 +49,7 @@ module.exports = (env) ->
       @framework.ruleManager.addActionProvider(new actions.HueSatActionProvider(@framework))
       @framework.ruleManager.addActionProvider(new actions.ActivateHueSceneActionProvider(@framework))
 
-      if @config.host?.length > 0
-        @hueApi = huebase.initHueApi(@config)
+      @hueApiAvailable = @discoverBridge().then =>
         env.logger.info "Requesting status of lights, light groups and scenes from the Hue API"
 
       @framework.on "after init", =>
@@ -85,25 +84,37 @@ module.exports = (env) ->
 
     discoverBridge: (eventData) =>
       if @config.host?.length > 0
-        return Promise.resolve(@config.host)
+        # If the Hue bridge hostname or ip is manually configured in the configuration, use that
+        apiPromise = Promise.resolve(@config.host)
+      else
+        # If not, start discovery of the bridge
+        @framework.deviceManager.discoverMessage(
+          'pimatic-hue-zll',
+          "No Hue bridge defined in the configuration, starting automatic search for the Hue bridge"
+        )
+        apiPromise = huebase.searchBridge(Math.min(eventData?.time or 5000, 5000)
+        ).then( (ipaddr) =>
+          @framework.deviceManager.discoverMessage(
+            'pimatic-hue-zll',
+            "Found Hue bridge on ip #{ipaddr}. " + \
+              "(To avoid auto-discovery on startup, add \"host\": \"#{ipaddr}\" to the plugin config.)"
+          )
+          return ipaddr
+        ).catch( (error) =>
+          @framework.deviceManager.discoverMessage(
+            'pimatic-hue-zll',
+            error.message
+          )
+          throw error
+        )
 
-      @framework.deviceManager.discoverMessage(
-        'pimatic-hue-zll',
-        "No Hue bridge defined in the configuration, starting automatic search for the Hue bridge"
-      )
-      return huebase.searchBridge(Math.min(eventData.time, 5000)
-      ).then( (ipaddr) =>
-        @framework.deviceManager.discoverMessage(
-          'pimatic-hue-zll',
-          "Found Hue bridge #{ipaddr}, adding it to the configuration"
-        )
-        @config.host = ipaddr
-        @hueApi = huebase.initHueApi(@config)
-      ).catch( (error) =>
-        @framework.deviceManager.discoverMessage(
-          'pimatic-hue-zll',
-          error.message
-        )
+      return apiPromise.then( (hostOrIp) =>
+        # Make a shallow copy of @config to avoid actually changing the configuration
+        config = extend {}, @config
+        config.host = hostOrIp
+        # Initialize hueApi for the plugin
+        @hueApi = huebase.initHueApi(config)
+        return hostOrIp
       )
 
     discoverLights: (lightsInventory) =>
@@ -215,17 +226,7 @@ module.exports = (env) ->
 
       @hue = new @HueClass(this, @plugin, @config.hueId)
       @hue.deviceStateCallback = @_lightStateReceived
-
-      if @config.polling < 0
-        # Enable global polling (for all lights or groups)
-        @lightStateInitialized = @hue.setupGlobalPolling(@plugin.config.polling, @plugin.config.retries * 8)
-      else
-        @lightStateInitialized = @hue.setupPolling(@config.polling, @plugin.config.retries * 8)
-      @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
-      # Ask Pimatic to wait completing init until the first poll has completed
-      @_cbAfterInit = (context) =>
-        context.waitForIt @lightStateInitialized
-      @plugin.framework.on "after init", @_cbAfterInit
+      @plugin.hueApiAvailable.then(@init)
 
     destroy: () ->
       @plugin.framework.removeListener "after init", @_cbAfterInit
@@ -240,6 +241,18 @@ module.exports = (env) ->
 
     @prepareConfig: (deviceConfig) ->
       deviceConfig.name = "" unless deviceConfig.name?
+
+    init: () =>
+      if @config.polling < 0
+        # Enable global polling (for all lights or groups)
+        @lightStateInitialized = @hue.setupGlobalPolling(@plugin.config.polling, @plugin.config.retries * 8)
+      else
+        @lightStateInitialized = @hue.setupPolling(@config.polling, @plugin.config.retries * 8)
+      @lightStateInitialized.then(@_replaceName) if @config.name.length is 0
+      # Ask Pimatic to wait completing init until the first poll has completed
+      @_cbAfterInit = (context) =>
+        context.waitForIt @lightStateInitialized
+      @plugin.framework.on "after init", @_cbAfterInit
 
     # Wait on first poll on initialization
     waitForInit: (callback) => Promise.join @lightStateInitialized, callback
@@ -561,14 +574,7 @@ module.exports = (env) ->
       super()
 
       @hue = new huebase.BaseHueScenes(this, @plugin)
-      scenesRetrieved = @hue.requestScenes(@plugin.config.retries * 8).then( =>
-        env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
-          ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
-      )
-      # Ask Pimatic to wait completing init until the scenes have been retrieved
-      @_cbAfterInit = (context) =>
-        context.waitForIt scenesRetrieved
-      @plugin.framework.on "after init", @_cbAfterInit
+      @plugin.hueApiAvailable.then(init)
 
     destroy: () ->
       @plugin.framework.removeListener "after init", @_cbAfterInit
@@ -589,6 +595,16 @@ module.exports = (env) ->
               type: t.string
             groupId:
               type: t.number
+
+    init: () =>
+      scenesRetrieved = @hue.requestScenes(@plugin.config.retries * 8).then( =>
+        env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
+          ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
+      )
+      # Ask Pimatic to wait completing init until the scenes have been retrieved
+      @_cbAfterInit = (context) =>
+        context.waitForIt scenesRetrieved
+      @plugin.framework.on "after init", @_cbAfterInit
 
     activateScene: (sceneName, groupId=null) =>
       return @hue.activateSceneByName(sceneName, groupId).then( =>
