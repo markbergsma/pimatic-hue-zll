@@ -98,7 +98,14 @@ module.exports = (env) ->
       return Promise.reject Error("Could not find Hue bridge: " + error.message)
     )
 
-  registerUser = (hueApi, hostname, userDescription) -> hueApi.registerUser hostname, userDescription
+  registerUser = (hueApi, hostname, userDescription, timeout=30000) =>
+    interval = 3000
+    return promiseRetry(
+      ( (retry, number) =>
+        hueApi.registerUser(hostname, userDescription).catch(retry)
+      ),
+      { retries: timeout / interval, factor: 1, minTimeout: interval, maxTimeout: interval }
+    )
 
   class BaseHueDevice
     @hueQ: new HueQueue({

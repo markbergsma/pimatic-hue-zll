@@ -79,8 +79,8 @@ module.exports = (env) ->
 
     onDiscover: (eventData) =>
       @discoverBridge(eventData
-      ).then(
-        @registerUser
+      ).then( (host) =>
+        @registerUser(host, eventData.time)
       ).then( =>
         env.logger.debug "Starting discovery of Hue devices"
 
@@ -115,21 +115,21 @@ module.exports = (env) ->
           )
           throw error
         )
-
       return apiPromise.then(@initApi)
 
-    registerUser: (hostname) =>
+    registerUser: (hostname, timeout) =>
+      timeout = Math.min(timeout, 30000)
       if @config.username?.length > 0
         return Promise.resolve [hostname, @config.username]
       else
         @framework.deviceManager.discoverMessage(
           'pimatic-hue-zll',
           "No Hue API username (key) defined in the configuration. Attempting to register; " + \
-            "Please press the link button on the Hue bridge within 30s!"
+            "Please press the link button on the Hue bridge within #{timeout / 1000}s!"
         )
         os = require "os"
         return huebase.registerUser(
-          @hueApi, hostname, "pimatic-hue-zll##{os.hostname()}"
+          @hueApi, hostname, "pimatic-hue-zll##{os.hostname()}", timeout
         ).then( (apiKey) =>
           @framework.deviceManager.discoverMessage(
             'pimatic-hue-zll',
