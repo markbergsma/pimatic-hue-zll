@@ -127,8 +127,9 @@ module.exports = (env) ->
           "No Hue API username (key) defined in the configuration. Attempting to register; " + \
             "Please press the link button on the Hue bridge within 30s!"
         )
+        os = require "os"
         return huebase.registerUser(
-          @hueApi, hostname, "pimatic-hue-zll"
+          @hueApi, hostname, "pimatic-hue-zll##{os.hostname()}"
         ).then( (apiKey) =>
           @framework.deviceManager.discoverMessage(
             'pimatic-hue-zll',
