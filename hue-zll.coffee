@@ -338,6 +338,13 @@ module.exports = (env) ->
   class HueZLLOnOffLightGroup extends HueZLLOnOffLight
     HueClass: huebase.BaseHueLightGroup
 
+    init: () =>
+      if @config.hueId is 0
+        # Group 0 (all lights) can't be polled
+        @lightStateInitialized = Promise.resolve(true)
+      else
+        super()
+
   class HueZLLDimmableLight extends HueZLLOnOffLight
     HueClass: huebase.BaseHueLight
 
