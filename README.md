@@ -22,7 +22,7 @@ For lights supporting white color temperature setting another slider is provided
 
 ## Installation
 
-When you already have a working Pimatic installation, the plugin can be installed using npm:
+When you already have a working Pimatic installation, the plugin can be installed from the Pimatic UI in the Settings - Plugins menu. Or, on the command-line using npm:
 
 ```
 $ npm install pimatic-hue-zll
@@ -30,7 +30,9 @@ $ npm install pimatic-hue-zll
 
 ## Configuration
 
-A minimal Pimatic `config.json` configuration of the hue-zll plugin with Pimatic 0.9 needs only the plugin name:
+An empty (default) configuration is enough to get started, if using Pimatic 0.9 auto-discovery and registering the plugin by pressing the Hue bridge link button within 30s on startup or discovery. The settings described below can also be adjusted from the Pimatic UI.
+
+If you'd rather edit the `config.json` file directly, a minimal Pimatic `config.json` configuration of the hue-zll plugin with Pimatic 0.9 needs only the plugin name:
 
 ```json
   "plugins": [
