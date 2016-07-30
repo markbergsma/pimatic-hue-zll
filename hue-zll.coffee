@@ -617,7 +617,7 @@ module.exports = (env) ->
 
       @hue = new huebase.BaseHueScenes(this, @plugin)
       @plugin.hueApiAvailable.then(
-        init
+        @init
       ).catch( (error) =>
         env.logger.error "Can't initialize device #{@id} because the Hue API failed to initialize: #{error.message}"
       )
