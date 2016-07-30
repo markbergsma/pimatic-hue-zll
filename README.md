@@ -30,7 +30,19 @@ $ npm install pimatic-hue-zll
 
 ## Configuration
 
-A minimal Pimatic `config.json` configuration of the hue-zll plugin needs the hostname or IP address of the Hue bridge, and an API username (API key) that is already registered with the bridge:
+A minimal Pimatic `config.json` configuration of the hue-zll plugin with Pimatic 0.9 needs only the plugin name:
+
+```json
+  "plugins": [
+    {
+      "plugin": "hue-zll"
+	}
+  ]
+```
+
+pimatic-hue-zll will attempt auto-discovery of the bridge on startup or when initiating device discovery. If the link button on the Hue bridge has been pressed in the last 30s, this allows the plugin to register itself with the bridge.
+
+Alternatively, the hostname or IP address of the Hue bridge, and the API username (API key) can be manually configured:
 
 ```json
   "plugins": [
@@ -42,9 +54,10 @@ A minimal Pimatic `config.json` configuration of the hue-zll plugin needs the ho
   ]
 ```
 
-Optionally, you can specify a different TCP port number (``port``), a timeout for Hue API commands (``timeout``, default: 500ms), a maximum amount of concurrent Hue API requests (``hueApiConcurrency``, default: 1) and the number of times a Hue API request will be retried on transient errors (``retries``, default: 1). A different polling interval (from the default 5s) for retrieving the latest Hue device status from the bridge:
+Optionally, you can enable debugging (``debug``), specify a different TCP port number (``port``), a timeout for Hue API commands (``timeout``, default: 500ms), a maximum amount of concurrent Hue API requests (``hueApiConcurrency``, default: 1) and the number of times a Hue API request will be retried on transient errors (``retries``, default: 1). A different polling interval (from the default 5s) for retrieving the latest Hue device status from the bridge:
 
 ```json
+      "debug": false,
       "port": 8080,
       "polling": 10000,
       "timeout": 2000,
@@ -62,7 +75,13 @@ it means that the plugin can't send API requests to the Hue bridge fast enough (
 
 ### Device configuration
 
-Currently all Hue devices need to be added to the `devices` section in Pimatic's `config.json`. At minimum the device needs to be given a unique Pimatic device id and a device class. Lights and light groups also require the Hue id as it is known by the bridge.
+Since Pimatic 0.9 and pimatic-hue-zll 0.3.0, automatic discovery of devices (lights and light groups) is supported. In the Pimatic menu, choose Settings - Devices, and click "Discover Devices". pimatic-hue-zll will then retrieve all known lights and light groups from the Hue bridge and determine the best configuration for them, which can be overriden if needed.
+
+#### Manual configuration
+
+All Hue devices are added to the `devices` section in Pimatic's `config.json`, and can also be edited in the Pimatic UI in the 'Devices' menu.
+
+At minimum the device needs to be given a unique Pimatic device id and a device class. Lights and light groups also require the Hue id as it is known by the bridge.
 
 A (user friendly) name property is required by Pimatic as well, but if you leave it out or define it as the empty string `""`, the Hue-ZLL plugin will retrieve the light or group name from the Hue API.
 
@@ -215,12 +234,12 @@ The scene last activated by Pimatic is available in the ```lastActivatedScene```
 
 ## Todo
 Some features and wishlist items on the todo-list are:
-* Hue scenes: ~~scene activation~~ (done), UI support (awaits Pimatic 0.9)
+* Hue scenes: ~~scene activation~~ (done), UI support
 * Alternative ways of setting colors (XY point support, RGB, predefined colors)
-* Automatically locating the Hue bridge, and bridge access registration
+* ~~Automatically locating the Hue bridge, and bridge access registration~~ (done)
 
 This will need upstream support:
 * Zigbee sensors (notably Hue dimmer switch and Hue tap support) (not yet supported in node-hue-api)
-* Automatically detecting the Hue/ZLL light type (awaits Pimatic 0.9)
-* Automatic discovery of all available Hue lights without manual configuration (awaits Pimatic 0.9)
+* ~~Automatically detecting the Hue/ZLL light type~~ (done)
+* ~~Automatic discovery of all available Hue lights without manual configuration~~ (done)
 
