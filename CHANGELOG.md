@@ -1,3 +1,11 @@
+### 0.3.0
+* Support Pimatic 0.9 auto-discovery features:
+  * Automatic discovery of the Hue bridge
+  * Registration (API key) of pimatic-hue-zll with the Hue bridge using the link button
+  * Automatic discovery of Hue lights and light groups
+* Allow device configuration to be edited from the Pimatic GUI in Pimatic 0.9
+* Add ``debug`` plugin configuration option to allow plugin-specific debug messages in Pimatic 0.9
+
 ### 0.2.1
 * Allow a space before the K (Kelvin) in the set color temperature action
 * Fix bug where pimatic-hue-zll would keep spamming the log and need a restart to work properly again after connection loss in some circumstances (issues #7, #10)
