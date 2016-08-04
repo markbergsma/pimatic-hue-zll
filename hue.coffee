@@ -354,6 +354,14 @@ module.exports = (env) ->
 
   class BaseHueScenes extends BaseHueDevice
 
+    @discover: (hueApi) ->
+      return BaseHueDevice.hueQ.retryRequest(
+        hueApi.scenes, [],
+        descr: "scenes inventory"
+      ).catch( (error) =>
+        env.logger.error "Error while retrieving inventory of all light groups:", error.message
+      )
+
     constructor: (@device, @plugin) ->
       super(@device, @plugin)
       @scenesByName = {}
@@ -361,13 +369,7 @@ module.exports = (env) ->
       @scenesPromise = null
 
     requestScenes: (retries) ->
-      return @scenesPromise = BaseHueDevice.hueQ.retryRequest(
-        @plugin.hueApi.scenes, [],
-        descr: "scenes",
-        retries: retries
-      ).then(
-        @_scenesReceived
-      )
+      return @scenesPromise = BaseHueScenes.discover(@plugin.hueApi).then(@_scenesReceived)
 
     _scenesReceived: (result) =>
       nameRegex = /^(.+) (on|off) (\d+)$/
