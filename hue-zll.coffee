@@ -88,6 +88,10 @@ module.exports = (env) ->
         groupsInventoryPromise = huebase.BaseHueLightGroup.discover(@hueApi)
         lightsInventoryPromise.then(@discoverLights)
         Promise.join lightsInventoryPromise, groupsInventoryPromise, @discoverLightGroups
+
+        # Create a BaseHueScenes instance for the purpose of this discovery
+        huescenes = new huebase.BaseHueScenes(null, this)
+        huescenes.requestScenes().then(@discoverScenes)
       )
 
     discoverBridge: (eventData) =>
@@ -240,6 +244,29 @@ module.exports = (env) ->
           )
         else
           env.logger.debug "Skipping known hue light group id #{group.id}"
+
+    discoverScenes: (scenes) =>
+      env.logger.debug "Hue API scenes inventory:"
+      env.logger.debug scenes
+
+      # Avoid duplicates
+      scenesList = (scene.nameid for key, scene of scenes)
+      for devid, dev of @framework.deviceManager.devices when dev instanceof HueZLLScenes
+        for button in dev.config.buttons
+          scenesList = scenesList.filter( (elt) -> elt isnt button.id )
+
+      unless scenesList.length is 0
+        config = {
+          class: HueZLLScenes.name,
+          name: "Hue Scenes",
+          buttons: ({id: scene.nameid, text: scene.uniquename} for k, scene of scenes when scene.nameid in scenesList)
+        }
+        descr = (scene.uniquename for key, scene of scenes when scene.nameid in scenesList).join(', ')
+        @framework.deviceManager.discoveredDevice(
+          'pimatic-hue-zll',
+          "Hue scenes: #{descr}",
+          config
+        )
 
     @deviceClass: (deviceType) ->
       return switch deviceType

@@ -368,7 +368,7 @@ module.exports = (env) ->
       @scenesByNameId = {}
       @scenesPromise = null
 
-    requestScenes: (retries) ->
+    requestScenes: (retries=1) ->
       return @scenesPromise = BaseHueScenes.discover(@plugin.hueApi).then(@_scenesReceived)
 
     _scenesReceived: (result) =>
@@ -394,6 +394,7 @@ module.exports = (env) ->
           idx++
         scene.nameid = nameid+suffix
         @scenesByNameId[scene.nameid] = scene
+      return @scenesByName
 
     _lookupSceneByName: (sceneName) => Promise.join @scenesPromise, ( => @scenesByName[sceneName.toLowerCase()] )
 
