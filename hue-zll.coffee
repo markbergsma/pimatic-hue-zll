@@ -10,6 +10,8 @@ module.exports = (env) ->
 
   t = env.require('decl-api').types
 
+  commons = require('pimatic-plugin-commons')(env)
+
   huebase = require('./hue') env
 
   # helper function to mix in key/value pairs from another object
@@ -21,6 +23,8 @@ module.exports = (env) ->
 
     init: (app, @framework, @config) =>
       deviceConfigDef = require("./device-config-schema")
+
+      @_base = commons.base(@, 'Plugin')
 
       deviceClasses = [
         HueZLLOnOffLight,
@@ -258,6 +262,7 @@ module.exports = (env) ->
       unless scenesList.length is 0
         config = {
           class: HueZLLScenes.name,
+          id: @_base.generateDeviceId(@framework, 'hue-scenes'),
           name: "Hue Scenes",
           buttons: ({id: scene.nameid, text: scene.uniquename} for k, scene of scenes when scene.nameid in scenesList)
         }
