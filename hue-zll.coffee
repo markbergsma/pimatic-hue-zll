@@ -684,9 +684,9 @@ module.exports = (env) ->
               type: t.number
 
     init: () =>
-      scenesRetrieved = @hue.requestScenes(@plugin.config.retries * 8).then( =>
-        env.logger.info "Retrieved #{Object.keys(@hue.scenesByName).length} unique scenes from the Hue API:",
-          ('"'+name+'"' for name in @getKnownSceneNames()).join(', ')
+      scenesRetrieved = @hue.requestScenes().then( (scenes) =>
+        env.logger.info "Retrieved #{Object.keys(scenes).length} unique scenes from the Hue API:",
+          ('"'+scene.uniquename+'"' for k, scene of scenes).join(', ')
       )
       # Ask Pimatic to wait completing init until the scenes have been retrieved
       @_cbAfterInit = (context) =>
