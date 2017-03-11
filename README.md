@@ -110,13 +110,21 @@ If you want to override the `name` property as it is displayed throughout Pimati
       "name": "Bedroom ceiling light",
 ```
 
+If you find that some lights are not controllable (greyed out) in the Pimatic UI even though they can be controlled fine from other Hue apps, try setting ``ignoreReachability``:
+
+```json
+      "ignoreReachability": true
+```
+
+This option is required at the moment to make Osram Lightify lights work well, and is automatically set during device discovery.
+
 The following light device classes are available from the HueZLL plugin:
 
 | Class name               | Description   |
 | ------------------------ | ------------- |
 | HueZLLOnOffLight         | a ZLL light which can only be switched on or off (e.g. Osram Lightify Plug) |
 | HueZLLDimmableLight      | a light that can be dimmed as well (e.g. Philips Hue White) |
-| HueZLLColorTempLight     | adds white color temperature control to a dimmable light (e.g. Osram Lightify TW) |
+| HueZLLColorTempLight     | adds white color temperature control to a dimmable light (e.g. Philips Hue White Ambiance or Osram Lightify TW) |
 | HueZLLColorLight         | a light which supports colors but not white color temperature (e.g. Philips Living Colors) |
 | HueZLLExtendedColorLight | a combination of the previous two: lights which supports colors as well as color temperature settings (e.g. Philips Hue Color) |
 
