@@ -23,7 +23,7 @@ $(document).on 'templateinit', (event) ->
     afterRender: (elements) ->
       super(elements)
       @switchEle = $(elements).find('select')
-      @switchEle.flipswitch(disabled: @getAttribute('reachable').value() is false)
+      @switchEle.flipswitch(disabled: @_isUnreachable())
       state = @getAttribute('state')
       if state.labels?
         capitaliseFirstLetter = (s) -> s.charAt(0).toUpperCase() + s.slice(1)
@@ -31,7 +31,7 @@ $(document).on 'templateinit', (event) ->
         @switchEle.find('option[value=off]').text(capitaliseFirstLetter state.labels[1])
       $(elements).find('.ui-flipswitch')
         .addClass('no-carousel-slide')
-        .toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
+        .toggleClass('ui-state-disabled', @_isUnreachable())
 
     onSwitchChange: ->
       if @_restoringState then return
@@ -71,8 +71,11 @@ $(document).on 'templateinit', (event) ->
         pimatic.try => @switchEle.flipswitch('refresh')
         @_restoringState = false
 
+    _isUnreachable: =>
+      @getAttribute('reachable').value() is false and not @getConfig('ignoreReachability')
+
     _disableInputs: =>
-      (@getAttribute('reachable').value() is false) or (@getAttribute('state').value() is off)
+      @_isUnreachable() or (@getAttribute('state').value() is off)
 
     _onStateChange: (newState) =>
       @_restoringState = true
@@ -82,7 +85,7 @@ $(document).on 'templateinit', (event) ->
 
     _onReachableChange: (nowReachable) =>
       pimatic.try => @switchEle.flipswitch(if nowReachable then 'enable' else 'disable')
-      @switchEle?.toggleClass('ui-state-disabled', @getAttribute('reachable').value() is false)
+      @switchEle?.toggleClass('ui-state-disabled', @_isUnreachable())
 
   class HueZLLDimmableItem extends HueZLLOnOffItem
     constructor: (templData, @device) ->
