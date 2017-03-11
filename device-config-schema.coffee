@@ -35,10 +35,6 @@ module.exports = {
         description: "Polling interval for this device (ms)"
         type: "number"
         default: -1
-      ignoreReachability:
-        description: "Ignore reachable attribute (device is always UI-controllable)"
-        type: "boolean"
-        default: false
   },
   HueZLLDimmableLight: {
     title: "Hue Dimmable light"
@@ -75,10 +71,6 @@ module.exports = {
         description: "Polling interval for this device (ms)"
         type: "number"
         default: -1
-      ignoreReachability:
-        description: "Ignore reachable attribute (device is always UI-controllable)"
-        type: "boolean"
-        default: false
   },
   HueZLLColorTempLight: {
     title: "Hue Color Temperature light"
@@ -115,10 +107,6 @@ module.exports = {
         description: "Polling interval for this device (ms)"
         type: "number"
         default: -1
-      ignoreReachability:
-        description: "Ignore reachable attribute (device is always UI-controllable)"
-        type: "boolean"
-        default: false
   },
   HueZLLColorLight: {
     title: "Hue Color light"
@@ -171,6 +159,10 @@ module.exports = {
         description: "Polling interval for this device (ms)"
         type: "number"
         default: -1
+      ignoreReachability:
+        description: "Ignore reachable attribute (device is always UI-controllable)"
+        type: "boolean"
+        default: false
   },
   HueZLLExtendedColorLightGroup: {
     title: "Hue Extended Color light group"
