@@ -40,7 +40,7 @@ module.exports = (env) ->
           @framework.deviceManager.registerDeviceClass(DeviceClass.name, {
             configDef: deviceConfigDef[DeviceClass.name],
             prepareConfig: HueZLLOnOffLight.prepareConfig,
-            createCallback: (deviceConfig) => new DeviceClass(deviceConfig, this)
+            createCallback: (deviceConfig, lastState) => new DeviceClass(deviceConfig, lastState, this)
           })
 
       actions = require("./actions") env
@@ -257,9 +257,10 @@ module.exports = (env) ->
 
     template: "huezllonoff"
 
-    constructor: (@config, @plugin) ->
+    constructor: (@config, lastState , @plugin) ->
       @id = @config.id
       @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
+      @_state = lastState?.state?.value or off
       @extendAttributesActions()
       super()
 
@@ -352,6 +353,10 @@ module.exports = (env) ->
     _dimlevel: null
 
     template: "huezlldimmable"
+
+    constructor: (@config, lastState , @plugin) ->
+      @_dimlevel = lastState?.dimlevel?.value or 0
+      super(@config, lastState, @plugin)
 
     extendAttributesActions: () =>
       super()
@@ -617,9 +622,10 @@ module.exports = (env) ->
   class HueZLLScenes extends env.devices.Device
     _lastActivatedScene: null
 
-    constructor: (@config, @plugin) ->
+    constructor: (@config, lastState , @plugin) ->
       @id = @config.id
       @name = @config.name
+      @_lastActivatedScene = lastState?.lastActivatedScene?.value or null
       @extendAttributesActions()
       super()
 
