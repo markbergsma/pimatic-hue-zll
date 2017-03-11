@@ -1,3 +1,8 @@
+### 0.3.1
+* Handle (ignore) attribute ct (colortemp) value 0 returned by the Hue API instead of giving an error
+* Introduce light device configuration option ``ignoreReachability`` to keep UI controls active despite lights being reported as unreachable (needed for e.g. Osram Lightify)
+* Automatically set ignoreReachability for Osram lights
+
 ### 0.3.0
 * Support Pimatic 0.9 auto-discovery features:
   * Automatic discovery of the Hue bridge
