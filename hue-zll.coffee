@@ -173,6 +173,7 @@ module.exports = (env) ->
               name: light.name,
               hueId: light.id
             }
+            config['ignoreReachability'] = true if light.manufacturername.toLowerCase() is "osram"
             descr = "#{config.name} (#{light.manufacturername} #{light.modelid}) [#{light.type}]"
 
             @framework.deviceManager.discoveredDevice(
