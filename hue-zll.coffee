@@ -95,7 +95,8 @@ module.exports = (env) ->
 
         # Create a BaseHueScenes instance for the purpose of this discovery
         huescenes = new huebase.BaseHueScenes(null, this)
-        huescenes.requestScenes().then(@discoverScenes)
+        scenesInventoryPromise = huescenes.requestScenes()
+        Promise.join scenesInventoryPromise, groupsInventoryPromise, @discoverScenes
       )
 
     discoverBridge: (eventData) =>
@@ -249,7 +250,7 @@ module.exports = (env) ->
         else
           env.logger.debug "Skipping known hue light group id #{group.id}"
 
-    discoverScenes: (scenes) =>
+    discoverScenes: (scenes, groupsInventory) =>
       env.logger.debug "Hue API scenes inventory:"
       env.logger.debug scenes
 
@@ -263,7 +264,7 @@ module.exports = (env) ->
         config = {
           class: HueZLLScenes.name,
           id: @_base.generateDeviceId(@framework, 'hue-scenes'),
-          name: "Hue Scenes",
+          name: "Hue scenes",
           buttons: ({id: scene.nameid, text: scene.uniquename} for k, scene of scenes when scene.nameid in scenesList)
         }
         descr = (scene.uniquename for key, scene of scenes when scene.nameid in scenesList).join(', ')
@@ -272,6 +273,32 @@ module.exports = (env) ->
           "Hue scenes: #{descr}",
           config
         )
+
+        # Attempt to match scenes to groups
+        groupScenes = {}
+        for k, scene of scenes
+          if scene.nameid in scenesList
+            groupMatches = (group for group in groupsInventory when group.lights? and
+              scene.lights.length is group.lights.length and scene.lights.every ( (elem) -> elem in group.lights ))
+            try
+              bestGroup = groupMatches.pop().name
+              env.logger.debug "Found best matching group #{bestGroup} for scene #{scene.nameid}"
+              groupScenes[bestGroup] = [] unless groupScenes[bestGroup]?
+              groupScenes[bestGroup].push(scene)
+            catch
+              env.logger.debug "No matching group found for scene #{scene.nameid}"
+
+        # Create a HueZLLScenes device for each matching group found
+        @framework.deviceManager.discoveredDevice(
+          'pimatic-hue-zll',
+          "Hue scenes (#{groupname}): #{(scene.uniquename for k, scene of scenes).join(', ')}",
+          {
+            class: HueZLLScenes.name,
+            id: @_base.generateDeviceId(@framework, "hue-scenes-#{groupname.toLowerCase()}"),
+            name: "Hue scenes (#{groupname})",
+            buttons: ({id: scene.nameid, text: scene.uniquename} for k, scene of scenes)
+          }
+        ) for groupname, scenes of groupScenes
 
     @deviceClass: (deviceType) ->
       return switch deviceType
