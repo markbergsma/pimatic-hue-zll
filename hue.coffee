@@ -415,6 +415,69 @@ module.exports = (env) ->
     lookupSceneUniqueNameByNameId: (sceneNameId) =>
       Promise.join @scenesPromise, ( => @scenesByNameId[sceneNameId].uniquename )
 
+  class BaseHueSensor extends BaseHueDevice
+
+    @globalPolling: null
+    @statusCallbacks: {}
+
+    @discover: (hueApi) ->
+      return BaseHueDevice.hueQ.retryRequest(
+        hueApi.sensors, [],
+        descr: "sensors inventory"
+      ).catch( (error) =>
+        env.logger.error "Error while retrieving inventory of all sensors:", error.message
+      )
+
+    @allSensorsReceived: (sensorsResult) ->
+      for sensor in sensorsResult.sensors
+        if Array.isArray(BaseHueSensor.statusCallbacks[sensor.id])
+          cb(sensor) for cb in BaseHueSensor.statusCallbacks[sensor.id]
+
+    constructor: (@device, @plugin, @hueId) ->
+      super(@device, @plugin)
+      @deviceStateCallback = null
+      @registerStatusHandler(@_statusReceived)
+
+    destroy: () ->
+      @deregisterStatusHandler(@_statusReceived)
+      super()
+
+    registerStatusHandler: (callback, hueId=@hueId) ->
+      if Array.isArray(@constructor.statusCallbacks[hueId])
+        @constructor.statusCallbacks[hueId].push(callback)
+      else
+        @constructor.statusCallbacks[hueId] = Array(callback)
+
+    deregisterStatusHandler: (callback, hueId=@hueId) ->
+      @constructor.statusCallbacks[hueId] = (cb for cb in @constructor.statusCallbacks when cb isnt callback)
+
+    setupGlobalPolling: (interval, retries) ->
+      repeatPoll = () =>
+        firstPoll = @pollAllSensors(retries)
+        firstPoll.delay(interval).finally( =>
+          repeatPoll()
+          return null
+        )
+        return firstPoll
+      return BaseHueSensor.globalPolling or
+        BaseHueSensor.globalPolling = repeatPoll()
+
+    pollAllSensors: (retries=@plugin.config.retries) =>
+      return BaseHueDevice.hueQ.retryRequest(@plugin.hueApi.sensors, [],
+        retries: retries,
+        descr: "poll of all sensors"
+      ).then(
+        BaseHueSensor.allSensorsReceived
+      ).catch( (error) =>
+        env.logger.error error.message
+      )
+
+    _statusReceived: (result) =>
+      env.logger.debug "Sensors result:", result # DEBUG
+      @name = result.name if result.name?
+      @type = result.type if result.type?
+      @deviceStateCallback?(result.state) if result.state?
+      return result.state or Promise.reject(Error("Missing state object in sensor status result"))
 
   return exports = {
     initHueApi,
@@ -424,5 +487,6 @@ module.exports = (env) ->
     BaseHueDevice,
     BaseHueLight,
     BaseHueLightGroup,
-    BaseHueScenes
+    BaseHueScenes,
+    BaseHueSensor
   }

@@ -37,7 +37,8 @@ module.exports = (env) ->
         HueZLLColorLightGroup,
         HueZLLExtendedColorLight,
         HueZLLExtendedColorLightGroup,
-        HueZLLScenes
+        HueZLLScenes,
+        HueZLLDaylightSensor
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -97,6 +98,8 @@ module.exports = (env) ->
         huescenes = new huebase.BaseHueScenes(null, this)
         scenesInventoryPromise = huescenes.requestScenes()
         Promise.join scenesInventoryPromise, groupsInventoryPromise, @discoverScenes
+
+        huebase.BaseHueSensor.discover(@hueApi).then(@discoverSensors)
       )
 
     discoverBridge: (eventData) =>
@@ -299,6 +302,13 @@ module.exports = (env) ->
             buttons: ({id: scene.nameid, text: scene.uniquename} for k, scene of scenes)
           }
         ) for groupname, scenes of groupScenes
+
+    discoverSensors: (sensorsInventory) =>
+      env.logger.debug "Hue API sensors inventory:"
+      env.logger.debug sensorsInventory
+
+      for sensor in sensorsInventory['sensors']
+        env.logger.debug "Sensor type #{sensor.type}, name '#{sensor.name}':", JSON.stringify(sensor.config)
 
     @deviceClass: (deviceType) ->
       return switch deviceType
@@ -743,5 +753,53 @@ module.exports = (env) ->
         throw new Error("Unknown scene name id #{buttonId}")
       )
 
+  class HueZLLDaylightSensor extends env.devices.PresenceSensor
+    HueClass: huebase.BaseHueSensor
+
+    _reachable: null
+
+    constructor: (@config, @plugin) ->
+      @id = @config.id
+      @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
+      super()
+
+      @hue = new @HueClass(this, @plugin, @config.hueId)
+      @hue.deviceStateCallback = @_sensorStateReceived
+      @plugin.hueApiAvailable.then(
+        @init
+      ).catch( (error) =>
+        env.logger.error "Can't initialize device #{@id} because the Hue API failed to initialize: #{error.message}"
+      )
+
+    destroy: () ->
+      @plugin.framework.removeListener "after init", @_cbAfterInit
+      @hue.destroy()
+      super()
+
+    init: () =>
+      # Enable global polling (for all sensors)
+      @sensorStateInitialized = @hue.setupGlobalPolling(@plugin.config.polling, @plugin.config.retries * 8)
+      @sensorStateInitialized.then(@_replaceName) if @config.name.length is 0
+      # Ask Pimatic to wait completing init until the first poll has completed
+      @_cbAfterInit = (context) =>
+        context.waitForIt @sensorStateInitialized
+      @plugin.framework.on "after init", @_cbAfterInit
+
+    # Wait on first poll on initialization
+    waitForInit: (callback) => Promise.join @sensorStateInitialized, callback
+
+    getPresence: -> @waitForInit ( => @_presence )
+
+    _sensorStateReceived: (rstate) =>
+      env.logger.debug "sensor state:", rstate # DEBUG
+      @_setPresence rstate.daylight unless rstate.daylight is null
+      @_setReachable rstate.reachable if rstate.reachable?
+      return rstate
+
+    _replaceName: =>
+      if @hue.name? and @hue.name.length isnt 0
+        env.logger.info("Changing name of #{@constructor.name} device #{@id} " +
+          "from \"#{@name}\" to \"#{@hue.name}\"")
+        @updateName @hue.name
 
   return new HueZLLPlugin()

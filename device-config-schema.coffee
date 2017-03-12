@@ -203,5 +203,13 @@ module.exports = {
               description: "Ask the user to confirm the button press"
               type: "boolean"
               default: false
+  },
+  HueZLLDaylightSensor: {
+    title: "Hue Daylight sensor"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API sensor id"
+        type: "number"
   }
 }
