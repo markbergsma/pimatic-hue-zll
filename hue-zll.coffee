@@ -310,8 +310,33 @@ module.exports = (env) ->
       env.logger.debug "Hue API sensors inventory:"
       env.logger.debug sensorsInventory
 
+      hueSensors = {}
+      for id, dev of @framework.deviceManager.devices
+        if dev instanceof env.devices.Sensor and dev.constructor.name.match(/^HueZLL.+Sensor$/)
+          hueSensors[dev.config.hueId] = dev
+
       for sensor in sensorsInventory['sensors']
-        env.logger.debug "Sensor type #{sensor.type}, name '#{sensor.name}':", JSON.stringify(sensor.config)
+        sensor.id = parseInt(sensor.id)
+        unless hueSensors[sensor.id]?
+          descr = "#{sensor.name} (#{sensor.manufacturername} #{sensor.modelid}) [#{sensor.type}]"
+          deviceClass = HueZLLPlugin.deviceClass(sensor.type)
+          if deviceClass?
+            config = {
+              class: deviceClass,
+              name: sensor.name,
+              hueId: sensor.id
+            }
+
+            if sensor.config?['on'] is false
+              env.logger.warn "Skipping disabled Hue sensor #{sensor.id}: #{descr}"
+            else
+              @framework.deviceManager.discoveredDevice(
+                'pimatic-hue-zll',
+                "Hue sensor #{config.hueId}: #{descr}",
+                config
+              )
+          else
+            env.logger.warn "Could not classify Hue sensor id #{sensor.id}: #{descr}"
 
     @deviceClass: (deviceType) ->
       return switch deviceType
@@ -320,6 +345,10 @@ module.exports = (env) ->
         when "Color temperature light"  then 'HueZLLColorTempLight'
         when "Color light"              then 'HueZLLColorLight'
         when "Extended color light"     then 'HueZLLExtendedColorLight'
+        when "Daylight"                 then 'HueZLLDaylightSensor'
+        when "ZLLPresence"              then 'HueZLLPresenceSensor'
+        when "ZLLTemperature"           then 'HueZLLTemperatureSensor'
+        when "ZLLLightLevel"            then 'HueZLLLightlevelSensor'
         else null
 
   class HueZLLOnOffLight extends env.devices.SwitchActuator
