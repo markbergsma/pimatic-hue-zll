@@ -38,7 +38,8 @@ module.exports = (env) ->
         HueZLLExtendedColorLight,
         HueZLLExtendedColorLightGroup,
         HueZLLScenes,
-        HueZLLDaylightSensor
+        HueZLLDaylightSensor,
+        HueZLLPresenceSensor
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -753,7 +754,7 @@ module.exports = (env) ->
         throw new Error("Unknown scene name id #{buttonId}")
       )
 
-  class HueZLLDaylightSensor extends env.devices.PresenceSensor
+  class BaseHueZLLPresenceSensor extends env.devices.PresenceSensor
     HueClass: huebase.BaseHueSensor
 
     _reachable: null
@@ -801,5 +802,9 @@ module.exports = (env) ->
         env.logger.info("Changing name of #{@constructor.name} device #{@id} " +
           "from \"#{@name}\" to \"#{@hue.name}\"")
         @updateName @hue.name
+
+  class HueZLLDaylightSensor extends BaseHueZLLPresenceSensor
+
+  class HueZLLPresenceSensor extends BaseHueZLLPresenceSensor
 
   return new HueZLLPlugin()
