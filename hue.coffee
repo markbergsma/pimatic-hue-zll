@@ -476,7 +476,7 @@ module.exports = (env) ->
       env.logger.debug "Sensors result:", result # DEBUG
       @name = result.name if result.name?
       @type = result.type if result.type?
-      @deviceStateCallback?(result.state) if result.state?
+      @deviceStateCallback?(result.state, result.config) if result.state?
       return result.state or Promise.reject(Error("Missing state object in sensor status result"))
 
   return exports = {

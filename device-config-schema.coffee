@@ -207,6 +207,7 @@ module.exports = {
   HueZLLDaylightSensor: {
     title: "Hue Daylight sensor"
     type: "object"
+    extensions: ["xAttributeOptions"]
     properties:
       hueId:
         description: "The Hue API sensor id"
@@ -215,6 +216,7 @@ module.exports = {
   HueZLLPresenceSensor: {
     title: "Hue Presence sensor"
     type: "object"
+    extensions: ["xAttributeOptions"]
     properties:
       hueId:
         description: "The Hue API sensor id"
@@ -223,6 +225,7 @@ module.exports = {
   HueZLLTemperatureSensor: {
     title: "Hue Temperature sensor"
     type: "object"
+    extensions: ["xAttributeOptions"]
     properties:
       hueId:
         description: "The Hue API sensor id"
@@ -231,6 +234,7 @@ module.exports = {
   HueZLLLightlevelSensor: {
     title: "Hue Light level sensor"
     type: "object"
+    extensions: ["xAttributeOptions"]
     properties:
       hueId:
         description: "The Hue API sensor id"
