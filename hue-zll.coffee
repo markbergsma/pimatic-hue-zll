@@ -40,7 +40,8 @@ module.exports = (env) ->
         HueZLLScenes,
         HueZLLDaylightSensor,
         HueZLLPresenceSensor,
-        HueZLLTemperatureSensor
+        HueZLLTemperatureSensor,
+        HueZLLLightlevelSensor
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -844,6 +845,47 @@ module.exports = (env) ->
       return rstate
 
   extend HueZLLTemperatureSensor.prototype, BaseHueSensorMixin
+
+  class HueZLLLightlevelSensor extends env.devices.TemperatureSensor
+    HueClass: huebase.BaseHueSensor
+
+    _lightlevel: undefined
+
+    attributes:
+      lightlevel:
+        description: "The measured light level"
+        type: t.number
+        unit: 'lx'
+        acronym: 'Lux'
+
+    constructor: (@config, @plugin) ->
+      @id = @config.id
+      @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
+      super()
+      @_constructHue(@config, @plugin, this, @HueClass)
+
+    destroy: () ->
+      @plugin.framework.removeListener "after init", @_cbAfterInit
+      @hue.destroy()
+      super()
+
+    init: () => @_initSensor()
+
+    _replaceName: () => @_replaceSensorName()
+
+    getLightlevel: -> @waitForInit ( => @_lightlevel )
+
+    _setLightlevel: (value) ->
+      @_lightlevel = value
+      @emit 'lightlevel', value
+
+    _sensorStateReceived: (rstate) =>
+      env.logger.debug "sensor state:", rstate # DEBUG
+      @_setLightlevel 10 ** ((rstate.lightlevel - 1) / 10000) unless rstate.lightlevel is null
+      #@_setReachable rstate.reachable if rstate.reachable? # FIXME
+      return rstate
+
+  extend HueZLLLightlevelSensor.prototype, BaseHueSensorMixin
 
 
   return new HueZLLPlugin()
