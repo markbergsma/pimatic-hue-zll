@@ -792,12 +792,14 @@ module.exports = (env) ->
       @_setReachable rconfig.reachable if rconfig?.reachable?
 
     _setOn: (value) ->
-      @_on = value
-      @emit 'on', value
+      unless @_on is value
+        @_on = value
+        @emit 'on', value
 
     _setReachable: (value) ->
-      @_reachable = value
-      @emit 'reachable', value
+      unless @_reachable is value
+        @_reachable = value
+        @emit 'reachable', value
 
     getOn: -> @waitForInit ( => @_on )
     getReachable: -> @waitForInit ( => @_reachable )
@@ -883,6 +885,9 @@ module.exports = (env) ->
 
     getTemperature: -> @waitForInit ( => @_temperature )
 
+    _setTemperature: (value) ->
+      super(value) unless @_temperature is value
+
     _sensorStateReceived: (rstate, rconfig) =>
       env.logger.debug "sensor state:", rstate # DEBUG
       @_setTemperature rstate.temperature / 100 unless rstate.temperature is null
@@ -933,8 +938,9 @@ module.exports = (env) ->
     getLightlevel: -> @waitForInit ( => @_lightlevel )
 
     _setLightlevel: (value) ->
-      @_lightlevel = value
-      @emit 'lightlevel', value
+      unless @_lightlevel is value
+        @_lightlevel = value
+        @emit 'lightlevel', value
 
     _sensorStateReceived: (rstate, rconfig) =>
       env.logger.debug "sensor state:", rstate # DEBUG
