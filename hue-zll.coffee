@@ -754,30 +754,19 @@ module.exports = (env) ->
         throw new Error("Unknown scene name id #{buttonId}")
       )
 
-  class BaseHueZLLPresenceSensor extends env.devices.PresenceSensor
-    HueClass: huebase.BaseHueSensor
-
+  BaseHueSensorMixin =
     _reachable: null
 
-    constructor: (@config, @plugin) ->
-      @id = @config.id
-      @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
-      super()
-
-      @hue = new @HueClass(this, @plugin, @config.hueId)
+    _constructHue: (config, plugin, device, hueclass) ->
+      @hue = new hueclass(device, plugin, config.hueId)
       @hue.deviceStateCallback = @_sensorStateReceived
-      @plugin.hueApiAvailable.then(
+      plugin.hueApiAvailable.then(
         @init
       ).catch( (error) =>
         env.logger.error "Can't initialize device #{@id} because the Hue API failed to initialize: #{error.message}"
       )
 
-    destroy: () ->
-      @plugin.framework.removeListener "after init", @_cbAfterInit
-      @hue.destroy()
-      super()
-
-    init: () =>
+    _initSensor: () ->
       # Enable global polling (for all sensors)
       @sensorStateInitialized = @hue.setupGlobalPolling(@plugin.config.polling, @plugin.config.retries * 8)
       @sensorStateInitialized.then(@_replaceName) if @config.name.length is 0
@@ -787,7 +776,31 @@ module.exports = (env) ->
       @plugin.framework.on "after init", @_cbAfterInit
 
     # Wait on first poll on initialization
-    waitForInit: (callback) => Promise.join @sensorStateInitialized, callback
+    waitForInit: (callback) -> Promise.join @sensorStateInitialized, callback
+
+    _replaceSensorName: ->
+      if @hue.name? and @hue.name.length isnt 0
+        env.logger.info("Changing name of #{@constructor.name} device #{@id} " +
+          "from \"#{@name}\" to \"#{@hue.name}\"")
+        @updateName @hue.name
+
+  class BaseHueZLLPresenceSensor extends env.devices.PresenceSensor
+    HueClass: huebase.BaseHueSensor
+
+    constructor: (@config, @plugin) ->
+      @id = @config.id
+      @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
+      super()
+      @_constructHue(@config, @plugin, this, @HueClass)
+
+    destroy: () ->
+      @plugin.framework.removeListener "after init", @_cbAfterInit
+      @hue.destroy()
+      super()
+
+    init: () => @_initSensor()
+
+    _replaceName: () => @_replaceSensorName()
 
     getPresence: -> @waitForInit ( => @_presence )
 
@@ -797,14 +810,11 @@ module.exports = (env) ->
       @_setReachable rstate.reachable if rstate.reachable?
       return rstate
 
-    _replaceName: =>
-      if @hue.name? and @hue.name.length isnt 0
-        env.logger.info("Changing name of #{@constructor.name} device #{@id} " +
-          "from \"#{@name}\" to \"#{@hue.name}\"")
-        @updateName @hue.name
-
   class HueZLLDaylightSensor extends BaseHueZLLPresenceSensor
+  extend HueZLLDaylightSensor.prototype, BaseHueSensorMixin
 
   class HueZLLPresenceSensor extends BaseHueZLLPresenceSensor
+  extend HueZLLPresenceSensor.prototype, BaseHueSensorMixin
+
 
   return new HueZLLPlugin()
