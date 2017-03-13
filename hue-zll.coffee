@@ -39,7 +39,8 @@ module.exports = (env) ->
         HueZLLExtendedColorLightGroup,
         HueZLLScenes,
         HueZLLDaylightSensor,
-        HueZLLPresenceSensor
+        HueZLLPresenceSensor,
+        HueZLLTemperatureSensor
       ]
       for DeviceClass in deviceClasses
         do (DeviceClass) =>
@@ -815,6 +816,34 @@ module.exports = (env) ->
 
   class HueZLLPresenceSensor extends BaseHueZLLPresenceSensor
   extend HueZLLPresenceSensor.prototype, BaseHueSensorMixin
+
+  class HueZLLTemperatureSensor extends env.devices.TemperatureSensor
+    HueClass: huebase.BaseHueSensor
+
+    constructor: (@config, @plugin) ->
+      @id = @config.id
+      @name = if @config.name.length isnt 0 then @config.name else "#{@constructor.name}_#{@id}"
+      super()
+      @_constructHue(@config, @plugin, this, @HueClass)
+
+    destroy: () ->
+      @plugin.framework.removeListener "after init", @_cbAfterInit
+      @hue.destroy()
+      super()
+
+    init: () => @_initSensor()
+
+    _replaceName: () => @_replaceSensorName()
+
+    getTemperature: -> @waitForInit ( => @_temperature )
+
+    _sensorStateReceived: (rstate) =>
+      env.logger.debug "sensor state:", rstate # DEBUG
+      @_setTemperature rstate.temperature / 100 unless rstate.temperature is null
+      #@_setReachable rstate.reachable if rstate.reachable? # FIXME
+      return rstate
+
+  extend HueZLLTemperatureSensor.prototype, BaseHueSensorMixin
 
 
   return new HueZLLPlugin()

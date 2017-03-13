@@ -219,5 +219,13 @@ module.exports = {
       hueId:
         description: "The Hue API sensor id"
         type: "number"
+  },
+  HueZLLTemperatureSensor: {
+    title: "Hue Temperature sensor"
+    type: "object"
+    properties:
+      hueId:
+        description: "The Hue API sensor id"
+        type: "number"
   }
 }
