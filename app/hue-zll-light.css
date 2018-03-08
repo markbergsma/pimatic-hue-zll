@@ -91,11 +91,63 @@ ul.items .huezlllight-device .ui-color .ui-slider-bg {
   background: none;
 }
 
+div.sp-container.sp-light.sp-buttons-disabled.sp-palette-buttons-disabled.sp-initial-disabled.ui-corner-all.ui-shadow {
+  background-color: #000;
+  border-radius: 5px;
+
+}
+
+.sp-color, .sp-hue, .sp-clear, .sp-picker-container {
+  border: none;
+}
+
+.sp-val {
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+
+.sp-hue {
+  border-bottom-right-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
 ul.items .huezlllight-device .ui-color {
   float: right;
   clear: right;
   min-height: 30px;
   margin-top: 8px;
+}
+.sp-palette-container, .sp-input-container.sp-cf {
+  display: none;
+}
+
+.sp-dragger {
+  width: 20px;
+  height: 20px;
+  transform: translateX(8px) translateY(8px);
+  border-radius: 100%;
+  background-color: #eee;
+  border-color: #111;
+  border-width: 2px;
+}
+
+.sp-slider {
+  background-color: transparent;
+  border: 3px solid #eee;
+  left: -3px;
+  right: -3px;
+  height: 5px;
+  transform: translateY(-3px);
+  border-radius: 3px;
+  opacity: 1;
+}
+
+.sp-top {
+  margin-bottom: 0;
+}
+
+.sp-picker-container {
+  width: 250px;
 }
 
 /* Mobile adjustments */
@@ -104,7 +156,8 @@ ul.items .huezlllight-device .ui-color {
       float: right;
       margin: 1px 4px -1px -15px;
       width: 13em;
-    }   
+    }
+
 }
 
 @media only screen and (max-width:320px){    
