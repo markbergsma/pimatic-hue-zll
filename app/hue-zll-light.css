@@ -125,7 +125,7 @@ ul.items .huezlllight-device .ui-color {
   width: 20px !important;
   height: 20px !important;
   transform: translateX(8px) translateY(8px);
-  border-radius: 100%;
+  border-radius: 100% !important;
   background-color: #eee !important;
   border-color: #111 !important;
   border-width: 2px;
