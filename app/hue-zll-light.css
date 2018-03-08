@@ -98,7 +98,7 @@ div.sp-container.sp-light.sp-buttons-disabled.sp-palette-buttons-disabled.sp-ini
 }
 
 .sp-color, .sp-hue, .sp-clear, .sp-picker-container {
-  border: none;
+  border: none !important;
 }
 
 .sp-val {
@@ -122,32 +122,32 @@ ul.items .huezlllight-device .ui-color {
 }
 
 .sp-dragger {
-  width: 20px;
-  height: 20px;
+  width: 20px !important;
+  height: 20px !important;
   transform: translateX(8px) translateY(8px);
   border-radius: 100%;
-  background-color: #eee;
-  border-color: #111;
+  background-color: #eee !important;
+  border-color: #111 !important;
   border-width: 2px;
 }
 
 .sp-slider {
-  background-color: transparent;
-  border: 3px solid #eee;
-  left: -3px;
-  right: -3px;
-  height: 5px;
+  background-color: transparent !important;
+  border: 3px solid #eee !important;
+  left: -3px !important;
+  right: -3px !important;
+  height: 5px !important;
   transform: translateY(-3px);
   border-radius: 3px;
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 .sp-top {
-  margin-bottom: 0;
+  margin-bottom: 0 !important;
 }
 
 .sp-picker-container {
-  width: 250px;
+  width: 250px !important;
 }
 
 /* Mobile adjustments */
