@@ -25,7 +25,7 @@
   "configSchema": "hue-zll-config-schema.coffee",
   "dependencies": {
     "es6-promise": "^3.0.2",
-    "node-hue-api": ">=2.2.0",
+    "node-hue-api": "2.4.4",
     "promise-retry": "^1.1.0",
     "simple-promise-queue": ">=0.1.7",
     "spectrum-colorpicker": "^1.8.0"
